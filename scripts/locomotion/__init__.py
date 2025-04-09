@@ -1,1 +1,0 @@
-from .anymal_c_train import *
