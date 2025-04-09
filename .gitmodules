@@ -4,3 +4,6 @@
 [submodule "lib/rsl_rl"]
 	path = lib/rsl_rl
 	url = https://github.com/leggedrobotics/rsl_rl.git
+[submodule "lib/IsaacLab"]
+	path = lib/IsaacLab
+	url = https://github.com/isaac-sim/IsaacLab
