@@ -1,29 +1,31 @@
-"""Script para gerar e visualizar apenas um terreno de Wave."""
+# SPDX-License-Identifier: BSD-3-Clause
 
-from omni.isaac.lab.app import AppLauncher
+"""Script to visualize only the ROUGH terrain defined in ROUGH_TERRAINS_CFG."""
 
-# inicializa a simulação
+from isaaclab.app import AppLauncher
+
+# inicia a simulação
 app_launcher = AppLauncher()
 simulation_app = app_launcher.app
 
-# resto da simulação
-import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.scene import InteractiveScene, InteractiveSceneCfg
-from omni.isaac.lab.assets import AssetBaseCfg
-from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.terrains import TerrainImporterCfg
-from omni.isaac.lab.utils.assets import ISAACLAB_NUCLEUS_DIR
+import isaaclab.sim as sim_utils
+from isaaclab.scene import InteractiveScene, InteractiveSceneCfg
+from isaaclab.assets import AssetBaseCfg
+from isaaclab.utils import configclass
+from isaaclab.terrains import TerrainImporterCfg
+from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
 
-from terrain.terrain_generator_cfg import WAVE_ONLY_CFG
+from terrain_generator import WAVE_ONLY_CFG
 
 @configclass
-class TerrainOnlySceneCfg(InteractiveSceneCfg):
-    # terreno
+class TerrainSceneCfg(InteractiveSceneCfg):
+    """Cena com apenas o terreno rough gerado."""
+
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
         terrain_type="generator",
         terrain_generator=WAVE_ONLY_CFG,
-        max_init_terrain_level=0,
+        max_init_terrain_level=5,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
@@ -39,28 +41,25 @@ class TerrainOnlySceneCfg(InteractiveSceneCfg):
         debug_vis=True,
     )
 
-    # iluminação
     sky_light = AssetBaseCfg(
         prim_path="/World/skyLight",
         spawn=sim_utils.DomeLightCfg(
-            intensity=750.0,
+            intensity=1000.0,
             texture_file=f"{ISAACLAB_NUCLEUS_DIR}/Materials/Textures/Skies/PolyHaven/kloofendal_43d_clear_puresky_4k.hdr",
         ),
     )
 
 
 def main():
-    # configuração da simulação
     sim_cfg = sim_utils.SimulationCfg(device="cuda:0")
     sim = sim_utils.SimulationContext(sim_cfg)
-    sim.set_camera_view([5.0, 5.0, 5.0], [0.0, 0.0, 0.0])
+    sim.set_camera_view([10.0, 10.0, 5.0], [0.0, 0.0, 0.0])
 
-    # configuração e criação da cena
-    scene_cfg = TerrainOnlySceneCfg(num_envs=1, env_spacing=2.5)
+    scene_cfg = TerrainSceneCfg(num_envs=1, env_spacing=2.5)
     scene = InteractiveScene(scene_cfg)
 
     sim.reset()
-    print("[INFO] Terreno gerado. Pressione ESC para fechar.")
+    print("[INFO] Terreno rough gerado. Pressione ESC para fechar.")
 
     while simulation_app.is_running():
         sim.step()
