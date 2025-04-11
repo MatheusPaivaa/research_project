@@ -1,10 +1,5 @@
-# SPDX-License-Identifier: BSD-3-Clause
-
-"""Script to visualize only the ROUGH terrain defined in ROUGH_TERRAINS_CFG."""
-
 from isaaclab.app import AppLauncher
 
-# inicia a simulação
 app_launcher = AppLauncher()
 simulation_app = app_launcher.app
 
@@ -15,40 +10,28 @@ from isaaclab.utils import configclass
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
 
-from terrain_generator import WAVE_ONLY_CFG
+from terrain_generator_cfg import MULTIPLE_TERRAINS_CFG, UNIQUE_TERRAINS_CFG
 
 @configclass
 class TerrainSceneCfg(InteractiveSceneCfg):
-    """Cena com apenas o terreno rough gerado."""
-
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
         terrain_type="generator",
-        terrain_generator=WAVE_ONLY_CFG,
+        terrain_generator=UNIQUE_TERRAINS_CFG,
         max_init_terrain_level=5,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
             restitution_combine_mode="multiply",
             static_friction=1.0,
-            dynamic_friction=1.0,
-        ),
-        visual_material=sim_utils.MdlFileCfg(
-            mdl_path=f"{ISAACLAB_NUCLEUS_DIR}/Materials/TilesMarbleSpiderWhiteBrickBondHoned/TilesMarbleSpiderWhiteBrickBondHoned.mdl",
-            project_uvw=True,
-            texture_scale=(0.25, 0.25),
+            dynamic_friction=2.0,
         ),
         debug_vis=True,
     )
 
-    sky_light = AssetBaseCfg(
-        prim_path="/World/skyLight",
-        spawn=sim_utils.DomeLightCfg(
-            intensity=1000.0,
-            texture_file=f"{ISAACLAB_NUCLEUS_DIR}/Materials/Textures/Skies/PolyHaven/kloofendal_43d_clear_puresky_4k.hdr",
-        ),
+    dome_light = AssetBaseCfg(
+        prim_path="/World/Light", spawn=sim_utils.DomeLightCfg(intensity=3000.0, color=(0.75, 0.75, 0.75))
     )
-
 
 def main():
     sim_cfg = sim_utils.SimulationCfg(device="cuda:0")
@@ -59,7 +42,7 @@ def main():
     scene = InteractiveScene(scene_cfg)
 
     sim.reset()
-    print("[INFO] Terreno rough gerado. Pressione ESC para fechar.")
+    print("[INFO] Terreno gerado. Pressione ESC para fechar.")
 
     while simulation_app.is_running():
         sim.step()
