@@ -1,4 +1,6 @@
 import math
+import sys
+import os
 
 scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if scripts_dir not in sys.path:
