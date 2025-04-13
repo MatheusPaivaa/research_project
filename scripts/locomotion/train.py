@@ -1,111 +1,14 @@
-import sys
-import os
-from isaaclab.app import AppLauncher
-
-# --- Isaac Lab Imports ---
-import torch
-import isaaclab.sim as sim_utils
-from isaaclab.assets import ArticulationCfg, AssetBaseCfg
-from isaaclab.scene import InteractiveScene, InteractiveSceneCfg
-from isaaclab.terrains import TerrainImporterCfg
-from isaaclab.sensors import CameraCfg, ContactSensorCfg, RayCasterCfg, patterns
 from isaaclab.utils import configclass
 
 scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if scripts_dir not in sys.path:
     sys.path.insert(0, scripts_dir)
 
-from terrain.terrain_generator_cfg import get_multiple_terrains_cfg
-from isaaclab_assets.robots.anymal import ANYMAL_C_CFG
-
+from envs.env_setup import CreateEnv
 
 @configclass
-class SceneCfg(InteractiveSceneCfg):
-    """Scene config with ANYmal-D and terrain config."""
-    
-    # Terrain config 
-    terrain = TerrainImporterCfg(
-        prim_path="/World/ground",
-        terrain_type="generator",
-        terrain_generator=get_multiple_terrains_cfg(num_rows=1, num_cols=3),
-        max_init_terrain_level=5,
-        collision_group=-1,
-        physics_material=sim_utils.RigidBodyMaterialCfg(
-            friction_combine_mode="multiply",
-            restitution_combine_mode="multiply",
-            static_friction=1.0,
-            dynamic_friction=1.0,
-        ),
-        debug_vis=False,
-    )
+class AnymalCEnvCfg(CreateEnv):
+    def __post_init__(self):
+        # post init of parent
+        super().__post_init__()
 
-    # Add global lights
-    light = AssetBaseCfg(
-        prim_path="/World/light",
-        spawn=sim_utils.DistantLightCfg(color=(0.75, 0.75, 0.75), intensity=3000.0),
-    )
-
-    # Add robot (Anymal_C)
-    robot: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-
-    # Heigh scanner config
-    height_scanner = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/base",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-        debug_vis=True,
-        mesh_prim_paths=["/World/ground"],
-    )
-
-
-def run_sim(sim: sim_utils.SimulationContext, scene: InteractiveScene, simulation_app):
-    sim_dt = sim.get_physics_dt()
-    sim_time = 0.0
-    count = 0
-
-    while simulation_app.is_running():
-        if count % 500 == 0:
-            print("\n[RESET] Resetting robot and sensors...\n")
-            count = 0
-            root_state = scene["robot"].data.default_root_state.clone()
-            root_state[:, :3] += scene.env_origins
-            scene["robot"].write_root_pose_to_sim(root_state[:, :7])
-            scene["robot"].write_root_velocity_to_sim(root_state[:, 7:])
-            joint_pos = scene["robot"].data.default_joint_pos.clone() + torch.rand_like(scene["robot"].data.default_joint_pos) * 0.1
-            scene["robot"].write_joint_state_to_sim(joint_pos, scene["robot"].data.default_joint_vel)
-            scene.reset()
-
-        scene["robot"].set_joint_position_target(scene["robot"].data.default_joint_pos)
-        scene.write_data_to_sim()
-        sim.step()
-        sim_time += sim_dt
-        count += 1
-        scene.update(sim_dt)
-
-        if count % 20 == 0:
-            print(f"[Time: {sim_time:.2f}s]")
-            print(f"Height Z+: {torch.max(scene['height_scanner'].data.ray_hits_w[..., -1]).item():.3f}")
-
-
-def create_env(num_envs = 2):
-    parser = AppLauncher.create_argparser()
-    args_cli = parser.parse_args(args=[])  # evita uso do terminal
-    app_launcher = AppLauncher(args_cli)
-    simulation_app = app_launcher.app
-
-    sim_cfg = sim_utils.SimulationCfg(dt=0.005, device=args_cli.device)
-    sim = sim_utils.SimulationContext(sim_cfg)
-    sim.set_camera_view(eye=[4, 3, 3], target=[0.0, 0.0, 0.5])
-
-    scene_cfg = SceneCfg(num_envs = num_envs, env_spacing = 2.5)
-    scene = InteractiveScene(scene_cfg)
-
-    sim.reset()
-    print("[Setup complete. Starting simulation...]")
-    run_sim(sim, scene, simulation_app)
-
-    simulation_app.close()
-
-
-create_env()
