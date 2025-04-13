@@ -1,92 +1,51 @@
-# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
-
 """
-This script demonstrates the environment for a quadruped robot with height-scan sensor.
+Fancy sensor setup with ANYmal-D:
+- Height Scanner
 
-In this example, we use a locomotion policy to control the robot. The robot is commanded to
-move forward at a constant velocity. The height-scan sensor is used to detect the height of
-the terrain.
-
-.. code-block:: bash
-
-    # Run the script
-    ./isaaclab.sh -p scripts/tutorials/03_envs/create_quadruped_base_env.py --num_envs 32
-
+Run with:
+    ./isaaclab.sh -p scripts/custom/anymal_d_sensors.py --num_envs ...
 """
 
-"""Launch Isaac Sim Simulator first."""
-
-
+import sys
+import os
 import argparse
-
 from isaaclab.app import AppLauncher
 
-# add argparse arguments
-parser = argparse.ArgumentParser(description="Tutorial on creating a quadruped base environment.")
-parser.add_argument("--num_envs", type=int, default=64, help="Number of environments to spawn.")
-
-# append AppLauncher cli args
+# CLI argument parsing
+parser = argparse.ArgumentParser(description="Setup ANYmal-D and Terrains.")
+parser.add_argument("--num_envs", type=int, default=2, help="Number of environments to spawn.")
 AppLauncher.add_app_launcher_args(parser)
-# parse the arguments
 args_cli = parser.parse_args()
 
-# launch omniverse app
+# Launch Isaac Sim
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
-"""Rest everything follows."""
-
+# --- Isaac Lab Imports ---
 import torch
-
-import isaaclab.envs.mdp as mdp
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
-from isaaclab.envs import ManagerBasedEnv, ManagerBasedEnvCfg
-from isaaclab.managers import EventTermCfg as EventTerm
-from isaaclab.managers import ObservationGroupCfg as ObsGroup
-from isaaclab.managers import ObservationTermCfg as ObsTerm
-from isaaclab.managers import SceneEntityCfg
-from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sensors import RayCasterCfg, patterns
+from isaaclab.scene import InteractiveScene, InteractiveSceneCfg
 from isaaclab.terrains import TerrainImporterCfg
+from isaaclab.sensors import CameraCfg, ContactSensorCfg, RayCasterCfg, patterns
 from isaaclab.utils import configclass
-from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR, check_file_path, read_file
-from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
-##
-# Pre-defined configs
-##
-from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
-from isaaclab_assets.robots.anymal import ANYMAL_C_CFG  # isort: skip
+scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if scripts_dir not in sys.path:
+    sys.path.insert(0, scripts_dir)
 
-
-##
-# Custom observation terms
-##
-
-
-def constant_commands(env: ManagerBasedEnv) -> torch.Tensor:
-    """The generated command from the command generator."""
-    return torch.tensor([[1, 0, 0]], device=env.device).repeat(env.num_envs, 1)
-
-
-##
-# Scene definition
-##
-
+from terrain.terrain_generator_cfg import get_unique_terrain_cfg, get_multiple_terrains_cfg
+from isaaclab_assets.robots.anymal import ANYMAL_C_CFG
 
 @configclass
-class MySceneCfg(InteractiveSceneCfg):
-    """Example scene configuration."""
-
-    # add terrain
+class FancySceneCfg(InteractiveSceneCfg):
+    """Scene config with ANYmal-D and terrain config."""
+    
+    # Terrain config 
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
         terrain_type="generator",
-        terrain_generator=ROUGH_TERRAINS_CFG,
+        terrain_generator=get_unique_terrain_cfg(num_rows=1, num_cols=3),
         max_init_terrain_level=5,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
@@ -98,10 +57,18 @@ class MySceneCfg(InteractiveSceneCfg):
         debug_vis=False,
     )
 
-    # add robot
+    # Add global lights
+    light = AssetBaseCfg(
+        prim_path="/World/light",
+        spawn=sim_utils.DistantLightCfg(color=(0.75, 0.75, 0.75), intensity=3000.0),
+    )
+
+    # Add robot (Anymal_C)
     robot: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
-    # sensors
+    # --- Adding ensors ---
+
+    # Heigh scanner config
     height_scanner = RayCasterCfg(
         prim_path="{ENV_REGEX_NS}/Robot/base",
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
@@ -111,135 +78,54 @@ class MySceneCfg(InteractiveSceneCfg):
         mesh_prim_paths=["/World/ground"],
     )
 
-    # lights
-    light = AssetBaseCfg(
-        prim_path="/World/light",
-        spawn=sim_utils.DistantLightCfg(color=(0.75, 0.75, 0.75), intensity=3000.0),
-    )
 
+def run_sim(sim: sim_utils.SimulationContext, scene: InteractiveScene):
+    sim_dt = sim.get_physics_dt()
+    sim_time = 0.0
+    count = 0
 
-##
-# MDP settings
-##
+    while simulation_app.is_running():
+        if count % 500 == 0:
+            print("\n[RESET] Resetting robot and sensors...\n")
+            count = 0
+            root_state = scene["robot"].data.default_root_state.clone()
+            root_state[:, :3] += scene.env_origins
+            scene["robot"].write_root_pose_to_sim(root_state[:, :7])
+            scene["robot"].write_root_velocity_to_sim(root_state[:, 7:])
+            joint_pos = scene["robot"].data.default_joint_pos.clone() + torch.rand_like(scene["robot"].data.default_joint_pos) * 0.1
+            scene["robot"].write_joint_state_to_sim(joint_pos, scene["robot"].data.default_joint_vel)
+            scene.reset()
 
+        # Apply action
+        scene["robot"].set_joint_position_target(scene["robot"].data.default_joint_pos)
+        scene.write_data_to_sim()
+        sim.step()
+        sim_time += sim_dt
+        count += 1
+        scene.update(sim_dt)
 
-@configclass
-class ActionsCfg:
-    """Action specifications for the MDP."""
-
-    joint_pos = mdp.JointPositionActionCfg(asset_name="robot", joint_names=[".*"], scale=0.5, use_default_offset=True)
-
-
-@configclass
-class ObservationsCfg:
-    """Observation specifications for the MDP."""
-
-    @configclass
-    class PolicyCfg(ObsGroup):
-        """Observations for policy group."""
-
-        # observation terms (order preserved)
-        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, noise=Unoise(n_min=-0.1, n_max=0.1))
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
-        projected_gravity = ObsTerm(
-            func=mdp.projected_gravity,
-            noise=Unoise(n_min=-0.05, n_max=0.05),
-        )
-        velocity_commands = ObsTerm(func=constant_commands)
-        joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
-        joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
-        actions = ObsTerm(func=mdp.last_action)
-        height_scan = ObsTerm(
-            func=mdp.height_scan,
-            params={"sensor_cfg": SceneEntityCfg("height_scanner")},
-            noise=Unoise(n_min=-0.1, n_max=0.1),
-            clip=(-1.0, 1.0),
-        )
-
-        def __post_init__(self):
-            self.enable_corruption = True
-            self.concatenate_terms = True
-
-    # observation groups
-    policy: PolicyCfg = PolicyCfg()
-
-
-@configclass
-class EventCfg:
-    """Configuration for events."""
-
-    reset_scene = EventTerm(func=mdp.reset_scene_to_default, mode="reset")
-
-
-##
-# Environment configuration
-##
-
-
-@configclass
-class QuadrupedEnvCfg(ManagerBasedEnvCfg):
-    """Configuration for the locomotion velocity-tracking environment."""
-
-    # Scene settings
-    scene: MySceneCfg = MySceneCfg(num_envs=args_cli.num_envs, env_spacing=2.5)
-    # Basic settings
-    observations: ObservationsCfg = ObservationsCfg()
-    actions: ActionsCfg = ActionsCfg()
-    events: EventCfg = EventCfg()
-
-    def __post_init__(self):
-        """Post initialization."""
-        # general settings
-        self.decimation = 4  # env decimation -> 50 Hz control
-        # simulation settings
-        self.sim.dt = 0.005  # simulation timestep -> 200 Hz physics
-        self.sim.physics_material = self.scene.terrain.physics_material
-        self.sim.device = args_cli.device
-        # update sensor update periods
-        # we tick all the sensors based on the smallest update period (physics update period)
-        if self.scene.height_scanner is not None:
-            self.scene.height_scanner.update_period = self.decimation * self.sim.dt  # 50 Hz
+        # --- Sensor logs ---
+        if count % 20 == 0:
+            print(f"[Time: {sim_time:.2f}s]")
+            # print(f"RGB:       {scene['rgb_camera'].data.output['rgb'].shape}")
+            # print(f"Semantic:  {scene['semantic_camera'].data.output['semantic_segmentation'].shape}")
+            print(f"Height Z+: {torch.max(scene['height_scanner'].data.ray_hits_w[..., -1]).item():.3f}")
+            # print(f"Contact F: {torch.max(scene['contact_sensor'].data.net_forces_w).item():.2f} N")
 
 
 def main():
-    """Main function."""
-    # setup base environment
-    env_cfg = QuadrupedEnvCfg()
-    env = ManagerBasedEnv(cfg=env_cfg)
+    sim_cfg = sim_utils.SimulationCfg(dt=0.005, device=args_cli.device)
+    sim = sim_utils.SimulationContext(sim_cfg)
+    sim.set_camera_view(eye=[4, 3, 3], target=[0.0, 0.0, 0.5])
 
-    # load level policy
-    policy_path = ISAACLAB_NUCLEUS_DIR + "/Policies/ANYmal-C/HeightScan/policy.pt"
-    # check if policy file exists
-    if not check_file_path(policy_path):
-        raise FileNotFoundError(f"Policy file '{policy_path}' does not exist.")
-    file_bytes = read_file(policy_path)
-    # jit load the policy
-    policy = torch.jit.load(file_bytes).to(env.device).eval()
+    scene_cfg = FancySceneCfg(num_envs=args_cli.num_envs, env_spacing=2.5)
+    scene = InteractiveScene(scene_cfg)
 
-    # simulate physics
-    count = 0
-    obs, _ = env.reset()
-    while simulation_app.is_running():
-        with torch.inference_mode():
-            # reset
-            if count % 1000 == 0:
-                obs, _ = env.reset()
-                count = 0
-                print("-" * 80)
-                print("[INFO]: Resetting environment...")
-            # infer action
-            action = policy(obs["policy"])
-            # step env
-            obs, _ = env.step(action)
-            # update counter
-            count += 1
-
-    # close the environment
-    env.close()
+    sim.reset()
+    print("[Setup complete. Starting simulation...]")
+    run_sim(sim, scene)
 
 
 if __name__ == "__main__":
-    # run the main function
     main()
-    # close sim app
     simulation_app.close()
