@@ -1,6 +1,25 @@
+"""
+Fancy sensor setup with ANYmal-D:
+- Height Scanner
+
+Run with:
+    ./isaaclab.sh -p scripts/custom/anymal_d_sensors.py --num_envs ...
+"""
+
 import sys
 import os
+import argparse
 from isaaclab.app import AppLauncher
+
+# CLI argument parsing
+parser = argparse.ArgumentParser(description="Setup ANYmal-D and Terrains.")
+parser.add_argument("--num_envs", type=int, default=2, help="Number of environments to spawn.")
+AppLauncher.add_app_launcher_args(parser)
+args_cli = parser.parse_args()
+
+# Launch Isaac Sim
+app_launcher = AppLauncher(args_cli)
+simulation_app = app_launcher.app
 
 # --- Isaac Lab Imports ---
 import torch
@@ -15,9 +34,11 @@ scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if scripts_dir not in sys.path:
     sys.path.insert(0, scripts_dir)
 
-from terrain.terrain_generator_cfg import get_multiple_terrains_cfg
-from isaaclab_assets.robots.anymal import ANYMAL_C_CFG
+# Terrain import
+from terrain.terrain_generator_cfg import get_unique_terrain_cfg, get_multiple_terrains_cfg
 
+# Anymal C model import
+from isaaclab_assets.robots.anymal import ANYMAL_C_CFG
 
 @configclass
 class SceneCfg(InteractiveSceneCfg):
@@ -48,6 +69,8 @@ class SceneCfg(InteractiveSceneCfg):
     # Add robot (Anymal_C)
     robot: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
+    # --- Adding ensors ---
+
     # Heigh scanner config
     height_scanner = RayCasterCfg(
         prim_path="{ENV_REGEX_NS}/Robot/base",
@@ -58,8 +81,7 @@ class SceneCfg(InteractiveSceneCfg):
         mesh_prim_paths=["/World/ground"],
     )
 
-
-def run_sim(sim: sim_utils.SimulationContext, scene: InteractiveScene, simulation_app):
+def run_sim(sim: sim_utils.SimulationContext, scene: InteractiveScene):
     sim_dt = sim.get_physics_dt()
     sim_time = 0.0
     count = 0
@@ -67,6 +89,7 @@ def run_sim(sim: sim_utils.SimulationContext, scene: InteractiveScene, simulatio
     while simulation_app.is_running():
         if count % 500 == 0:
             print("\n[RESET] Resetting robot and sensors...\n")
+
             count = 0
             root_state = scene["robot"].data.default_root_state.clone()
             root_state[:, :3] += scene.env_origins
@@ -76,6 +99,7 @@ def run_sim(sim: sim_utils.SimulationContext, scene: InteractiveScene, simulatio
             scene["robot"].write_joint_state_to_sim(joint_pos, scene["robot"].data.default_joint_vel)
             scene.reset()
 
+        # Apply action
         scene["robot"].set_joint_position_target(scene["robot"].data.default_joint_pos)
         scene.write_data_to_sim()
         sim.step()
@@ -83,29 +107,30 @@ def run_sim(sim: sim_utils.SimulationContext, scene: InteractiveScene, simulatio
         count += 1
         scene.update(sim_dt)
 
+        # --- Sensor logs ---
         if count % 20 == 0:
             print(f"[Time: {sim_time:.2f}s]")
+            # print(f"RGB:       {scene['rgb_camera'].data.output['rgb'].shape}")
+            # print(f"Semantic:  {scene['semantic_camera'].data.output['semantic_segmentation'].shape}")
             print(f"Height Z+: {torch.max(scene['height_scanner'].data.ray_hits_w[..., -1]).item():.3f}")
+            # print(f"Contact F: {torch.max(scene['contact_sensor'].data.net_forces_w).item():.2f} N")
 
 
-def create_env(num_envs = 2):
-    parser = AppLauncher.create_argparser()
-    args_cli = parser.parse_args(args=[])  # evita uso do terminal
-    app_launcher = AppLauncher(args_cli)
-    simulation_app = app_launcher.app
-
+def main():
     sim_cfg = sim_utils.SimulationCfg(dt=0.005, device=args_cli.device)
     sim = sim_utils.SimulationContext(sim_cfg)
+
     sim.set_camera_view(eye=[4, 3, 3], target=[0.0, 0.0, 0.5])
 
-    scene_cfg = SceneCfg(num_envs = num_envs, env_spacing = 2.5)
+    # Scene settings
+    scene_cfg = SceneCfg(num_envs=args_cli.num_envs, env_spacing=2.5)
     scene = InteractiveScene(scene_cfg)
 
     sim.reset()
     print("[Setup complete. Starting simulation...]")
-    run_sim(sim, scene, simulation_app)
+    run_sim(sim, scene)
 
+
+if __name__ == "__main__":
+    main()
     simulation_app.close()
-
-
-create_env()

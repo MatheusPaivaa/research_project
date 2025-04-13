@@ -54,7 +54,7 @@ def get_unique_terrain_cfg(num_rows=4, num_cols=4, size=(8.0, 8.0)) -> terrain_g
         sub_terrains={
             "wave_terrain": terrain_gen.HfWaveTerrainCfg(
                 proportion=1.0,
-                amplitude_range=(0.0, 0.1),
+                amplitude_range=(0.06, 0.1),
                 num_waves=8,
                 border_width=0.25
             )
