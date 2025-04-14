@@ -15,11 +15,9 @@ from isaaclab.sim import SimulationCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 
-##
 # Pre-defined configs
-##
-from isaaclab_assets.robots.anymal import ANYMAL_C_CFG  # isort: skip
-from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
+from isaaclab_assets.robots.anymal import ANYMAL_C_CFG
+from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG 
 
 
 @configclass
@@ -51,7 +49,8 @@ class EventCfg:
 
 @configclass
 class AnymalCFlatEnvCfg(DirectRLEnvCfg):
-    # env
+
+    # Env config
     episode_length_s = 20.0
     decimation = 4
     action_scale = 0.5
@@ -59,7 +58,7 @@ class AnymalCFlatEnvCfg(DirectRLEnvCfg):
     observation_space = 48
     state_space = 0
 
-    # simulation
+    # Simulation
     sim: SimulationCfg = SimulationCfg(
         dt=1 / 200,
         render_interval=decimation,
@@ -71,6 +70,7 @@ class AnymalCFlatEnvCfg(DirectRLEnvCfg):
             restitution=0.0,
         ),
     )
+
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
         terrain_type="plane",
@@ -85,19 +85,19 @@ class AnymalCFlatEnvCfg(DirectRLEnvCfg):
         debug_vis=False,
     )
 
-    # scene
+    # Scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=4.0, replicate_physics=True)
 
-    # events
+    # Events
     events: EventCfg = EventCfg()
 
-    # robot
+    # Robot
     robot: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="/World/envs/env_.*/Robot")
     contact_sensor: ContactSensorCfg = ContactSensorCfg(
         prim_path="/World/envs/env_.*/Robot/.*", history_length=3, update_period=0.005, track_air_time=True
     )
 
-    # reward scales
+    # Reward scales
     lin_vel_reward_scale = 1.0
     yaw_rate_reward_scale = 0.5
     z_vel_reward_scale = -2.0
@@ -112,7 +112,8 @@ class AnymalCFlatEnvCfg(DirectRLEnvCfg):
 
 @configclass
 class AnymalCRoughEnvCfg(AnymalCFlatEnvCfg):
-    # env
+
+    # Env config
     observation_space = 235
 
     terrain = TerrainImporterCfg(
@@ -134,7 +135,7 @@ class AnymalCRoughEnvCfg(AnymalCFlatEnvCfg):
         debug_vis=False,
     )
 
-    # we add a height scanner for perceptive locomotion
+    # Height scanner
     height_scanner = RayCasterCfg(
         prim_path="/World/envs/env_.*/Robot/base",
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
@@ -144,5 +145,5 @@ class AnymalCRoughEnvCfg(AnymalCFlatEnvCfg):
         mesh_prim_paths=["/World/ground"],
     )
 
-    # reward scales (override from flat config)
+    # Reward scales (override from flat config)
     flat_orientation_reward_scale = 0.0

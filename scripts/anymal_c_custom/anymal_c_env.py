@@ -47,6 +47,7 @@ class AnymalCEnv(DirectRLEnv):
                 "flat_orientation_l2",
             ]
         }
+        
         # Get specific body indices
         self._base_id, _ = self._contact_sensor.find_bodies("base")
         self._feet_ids, _ = self._contact_sensor.find_bodies(".*FOOT")
