@@ -19,6 +19,8 @@ from isaaclab.utils import configclass
 from isaaclab_assets.robots.anymal import ANYMAL_C_CFG
 from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG 
 
+from terrain.terrain_generator_cfg import get_multiple_terrains_cfg, get_unique_terrain_cfg
+
 
 @configclass
 class EventCfg:
@@ -119,7 +121,7 @@ class AnymalCRoughEnvCfg(AnymalCFlatEnvCfg):
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
         terrain_type="generator",
-        terrain_generator=ROUGH_TERRAINS_CFG,
+        terrain_generator=get_unique_terrain_cfg(num_rows=1, num_cols=64),
         max_init_terrain_level=9,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
