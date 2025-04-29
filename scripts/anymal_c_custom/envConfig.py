@@ -3,6 +3,13 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+import os
+import sys
+
+scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if scripts_dir not in sys.path:
+    sys.path.insert(0, scripts_dir)
+
 import isaaclab.envs.mdp as mdp
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg
@@ -17,10 +24,7 @@ from isaaclab.utils import configclass
 
 # Pre-defined configs
 from isaaclab_assets.robots.anymal import ANYMAL_C_CFG
-from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG 
-
-from terrain.terrain_generator_cfg import get_multiple_terrains_cfg, get_unique_terrain_cfg
-
+from .terrain_generator_cfg import get_multiple_terrains_cfg, get_unique_terrain_cfg
 
 @configclass
 class EventCfg:
@@ -88,7 +92,7 @@ class AnymalCFlatEnvCfg(DirectRLEnvCfg):
     )
 
     # Scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=4.0, replicate_physics=True)
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=25.0, replicate_physics=True)
 
     # Events
     events: EventCfg = EventCfg()
@@ -121,7 +125,7 @@ class AnymalCRoughEnvCfg(AnymalCFlatEnvCfg):
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
         terrain_type="generator",
-        terrain_generator=get_unique_terrain_cfg(num_rows=1, num_cols=64),
+        terrain_generator=get_unique_terrain_cfg(num_rows=10, num_cols=20),
         max_init_terrain_level=9,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
@@ -129,10 +133,6 @@ class AnymalCRoughEnvCfg(AnymalCFlatEnvCfg):
             restitution_combine_mode="multiply",
             static_friction=1.0,
             dynamic_friction=1.0,
-        ),
-        visual_material=sim_utils.MdlFileCfg(
-            mdl_path="{NVIDIA_NUCLEUS_DIR}/Materials/Base/Architecture/Shingles_01.mdl",
-            project_uvw=True,
         ),
         debug_vis=False,
     )

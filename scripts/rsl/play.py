@@ -149,6 +149,10 @@ def main():
         start_time = time.time()
         # run everything in inference mode
         with torch.inference_mode():
+
+            command = torch.tensor([[1.0, 0.0, 0.0]], device=env.device)  # v_x = 0.5 m/s, omega_z = 0.5 rad/s
+            env.unwrapped._commands[:] = command
+
             # agent stepping
             actions = policy(obs)
             # env stepping
