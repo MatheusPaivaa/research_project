@@ -1,0 +1,152 @@
+[
+    {
+        "v_x_cmd": -1.0,
+        "omega_z_cmd": -1.0,
+        "avg_error_x": 0.3233389860969037,
+        "avg_error_omega_z": 0.5069651513795058
+    },
+    {
+        "v_x_cmd": -1.0,
+        "omega_z_cmd": -0.5,
+        "avg_error_x": 0.2146021984318892,
+        "avg_error_omega_z": 0.22676655695952164
+    },
+    {
+        "v_x_cmd": -1.0,
+        "omega_z_cmd": 0.0,
+        "avg_error_x": 0.21387105848640203,
+        "avg_error_omega_z": 0.20541512484799992
+    },
+    {
+        "v_x_cmd": -1.0,
+        "omega_z_cmd": 0.5,
+        "avg_error_x": 0.3108292816321676,
+        "avg_error_omega_z": 0.2284129108587901
+    },
+    {
+        "v_x_cmd": -1.0,
+        "omega_z_cmd": 1.0,
+        "avg_error_x": 0.3122642065510154,
+        "avg_error_omega_z": 0.2924249455655615
+    },
+    {
+        "v_x_cmd": -0.5,
+        "omega_z_cmd": -1.0,
+        "avg_error_x": 0.1370693240823845,
+        "avg_error_omega_z": 0.19921843403577805
+    },
+    {
+        "v_x_cmd": -0.5,
+        "omega_z_cmd": -0.5,
+        "avg_error_x": 0.13202343482275805,
+        "avg_error_omega_z": 0.29242142399633303
+    },
+    {
+        "v_x_cmd": -0.5,
+        "omega_z_cmd": 0.0,
+        "avg_error_x": 0.1276882657321791,
+        "avg_error_omega_z": 0.18618416225506615
+    },
+    {
+        "v_x_cmd": -0.5,
+        "omega_z_cmd": 0.5,
+        "avg_error_x": 0.12126267816560964,
+        "avg_error_omega_z": 0.09418225785841544
+    },
+    {
+        "v_x_cmd": -0.5,
+        "omega_z_cmd": 1.0,
+        "avg_error_x": 0.1788327867067419,
+        "avg_error_omega_z": 0.13120355916023255
+    },
+    {
+        "v_x_cmd": 0.0,
+        "omega_z_cmd": -1.0,
+        "avg_error_x": 0.03683737951465688,
+        "avg_error_omega_z": 0.6437190333933492
+    },
+    {
+        "v_x_cmd": 0.0,
+        "omega_z_cmd": -0.5,
+        "avg_error_x": 0.11926900817343267,
+        "avg_error_omega_z": 0.1449510398345689
+    },
+    {
+        "v_x_cmd": 0.0,
+        "omega_z_cmd": 0.0,
+        "avg_error_x": 0.04780025252637764,
+        "avg_error_omega_z": 0.03483209306826757
+    },
+    {
+        "v_x_cmd": 0.0,
+        "omega_z_cmd": 0.5,
+        "avg_error_x": 0.03666722935799044,
+        "avg_error_omega_z": 0.0750160718758901
+    },
+    {
+        "v_x_cmd": 0.0,
+        "omega_z_cmd": 1.0,
+        "avg_error_x": 0.08385766279488598,
+        "avg_error_omega_z": 0.42376097130651275
+    },
+    {
+        "v_x_cmd": 0.5,
+        "omega_z_cmd": -1.0,
+        "avg_error_x": 0.11225579837337137,
+        "avg_error_omega_z": 0.2183314880480369
+    },
+    {
+        "v_x_cmd": 0.5,
+        "omega_z_cmd": -0.5,
+        "avg_error_x": 0.09777818162428836,
+        "avg_error_omega_z": 0.2056714160554111
+    },
+    {
+        "v_x_cmd": 0.5,
+        "omega_z_cmd": 0.0,
+        "avg_error_x": 0.07858741033573946,
+        "avg_error_omega_z": 0.13977741842837227
+    },
+    {
+        "v_x_cmd": 0.5,
+        "omega_z_cmd": 0.5,
+        "avg_error_x": 0.10897628537317117,
+        "avg_error_omega_z": 0.14210972777505715
+    },
+    {
+        "v_x_cmd": 0.5,
+        "omega_z_cmd": 1.0,
+        "avg_error_x": 0.14132474106550216,
+        "avg_error_omega_z": 0.19851881031195323
+    },
+    {
+        "v_x_cmd": 1.0,
+        "omega_z_cmd": -1.0,
+        "avg_error_x": 0.285397221232454,
+        "avg_error_omega_z": 0.4244371969476342
+    },
+    {
+        "v_x_cmd": 1.0,
+        "omega_z_cmd": -0.5,
+        "avg_error_x": 0.20000275192658107,
+        "avg_error_omega_z": 0.1276725054010749
+    },
+    {
+        "v_x_cmd": 1.0,
+        "omega_z_cmd": 0.0,
+        "avg_error_x": 0.14760918623209,
+        "avg_error_omega_z": 0.10698675188565782
+    },
+    {
+        "v_x_cmd": 1.0,
+        "omega_z_cmd": 0.5,
+        "avg_error_x": 0.14210448010762533,
+        "avg_error_omega_z": 0.10685856569806734
+    },
+    {
+        "v_x_cmd": 1.0,
+        "omega_z_cmd": 1.0,
+        "avg_error_x": 0.2769664459071355,
+        "avg_error_omega_z": 0.1943762407725056
+    }
+]

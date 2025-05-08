@@ -1,0 +1,152 @@
+[
+    {
+        "v_x_cmd": -1.0,
+        "omega_z_cmd": -1.0,
+        "avg_error_x": 0.5518628373925264,
+        "avg_error_omega_z": 0.3247841801581283
+    },
+    {
+        "v_x_cmd": -1.0,
+        "omega_z_cmd": -0.5,
+        "avg_error_x": 0.7024004055966313,
+        "avg_error_omega_z": 0.3063382231959452
+    },
+    {
+        "v_x_cmd": -1.0,
+        "omega_z_cmd": 0.0,
+        "avg_error_x": 1.0344933330700732,
+        "avg_error_omega_z": 0.2772490758852412
+    },
+    {
+        "v_x_cmd": -1.0,
+        "omega_z_cmd": 0.5,
+        "avg_error_x": 0.8153851907368904,
+        "avg_error_omega_z": 0.2930587743440022
+    },
+    {
+        "v_x_cmd": -1.0,
+        "omega_z_cmd": 1.0,
+        "avg_error_x": 0.7482996289323395,
+        "avg_error_omega_z": 0.36828813528642057
+    },
+    {
+        "v_x_cmd": -0.5,
+        "omega_z_cmd": -1.0,
+        "avg_error_x": 0.4086659071986408,
+        "avg_error_omega_z": 0.4824009267638127
+    },
+    {
+        "v_x_cmd": -0.5,
+        "omega_z_cmd": -0.5,
+        "avg_error_x": 0.38321203586459157,
+        "avg_error_omega_z": 0.23889695058887203
+    },
+    {
+        "v_x_cmd": -0.5,
+        "omega_z_cmd": 0.0,
+        "avg_error_x": 0.3537840647988099,
+        "avg_error_omega_z": 0.18183858780325265
+    },
+    {
+        "v_x_cmd": -0.5,
+        "omega_z_cmd": 0.5,
+        "avg_error_x": 0.2349902178500779,
+        "avg_error_omega_z": 0.2073153372419377
+    },
+    {
+        "v_x_cmd": -0.5,
+        "omega_z_cmd": 1.0,
+        "avg_error_x": 0.2032857168732832,
+        "avg_error_omega_z": 0.23215281347185374
+    },
+    {
+        "v_x_cmd": 0.0,
+        "omega_z_cmd": -1.0,
+        "avg_error_x": 0.10553763867324839,
+        "avg_error_omega_z": 0.1570438356300195
+    },
+    {
+        "v_x_cmd": 0.0,
+        "omega_z_cmd": -0.5,
+        "avg_error_x": 0.10305099267481516,
+        "avg_error_omega_z": 0.13585425672866405
+    },
+    {
+        "v_x_cmd": 0.0,
+        "omega_z_cmd": 0.0,
+        "avg_error_x": 0.037612923883561356,
+        "avg_error_omega_z": 0.05433559961472929
+    },
+    {
+        "v_x_cmd": 0.0,
+        "omega_z_cmd": 0.5,
+        "avg_error_x": 0.10191796605521813,
+        "avg_error_omega_z": 0.09101150786876679
+    },
+    {
+        "v_x_cmd": 0.0,
+        "omega_z_cmd": 1.0,
+        "avg_error_x": 0.13786497591040098,
+        "avg_error_omega_z": 0.2906334033310413
+    },
+    {
+        "v_x_cmd": 0.5,
+        "omega_z_cmd": -1.0,
+        "avg_error_x": 0.13935922044515608,
+        "avg_error_omega_z": 0.22298073611656824
+    },
+    {
+        "v_x_cmd": 0.5,
+        "omega_z_cmd": -0.5,
+        "avg_error_x": 0.08612691673636437,
+        "avg_error_omega_z": 0.1136227292517821
+    },
+    {
+        "v_x_cmd": 0.5,
+        "omega_z_cmd": 0.0,
+        "avg_error_x": 0.04801760331789653,
+        "avg_error_omega_z": 0.05023739465230998
+    },
+    {
+        "v_x_cmd": 0.5,
+        "omega_z_cmd": 0.5,
+        "avg_error_x": 0.1542778398146232,
+        "avg_error_omega_z": 0.13507238813241323
+    },
+    {
+        "v_x_cmd": 0.5,
+        "omega_z_cmd": 1.0,
+        "avg_error_x": 0.09063098287644486,
+        "avg_error_omega_z": 0.14921657801667848
+    },
+    {
+        "v_x_cmd": 1.0,
+        "omega_z_cmd": -1.0,
+        "avg_error_x": 0.24415240152614812,
+        "avg_error_omega_z": 0.30011773510277273
+    },
+    {
+        "v_x_cmd": 1.0,
+        "omega_z_cmd": -0.5,
+        "avg_error_x": 0.10499568556745847,
+        "avg_error_omega_z": 0.10982262334227562
+    },
+    {
+        "v_x_cmd": 1.0,
+        "omega_z_cmd": 0.0,
+        "avg_error_x": 0.07880838039517403,
+        "avg_error_omega_z": 0.07413153308826925
+    },
+    {
+        "v_x_cmd": 1.0,
+        "omega_z_cmd": 0.5,
+        "avg_error_x": 0.14630323015898467,
+        "avg_error_omega_z": 0.13093811846897005
+    },
+    {
+        "v_x_cmd": 1.0,
+        "omega_z_cmd": 1.0,
+        "avg_error_x": 0.13870376582443714,
+        "avg_error_omega_z": 0.14509407035509744
+    }
+]

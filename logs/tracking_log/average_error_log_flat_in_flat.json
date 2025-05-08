@@ -1,0 +1,152 @@
+[
+    {
+        "v_x_cmd": -1.0,
+        "omega_z_cmd": -1.0,
+        "avg_error_x": 0.07315059331307809,
+        "avg_error_omega_z": 0.04340408172210058
+    },
+    {
+        "v_x_cmd": -1.0,
+        "omega_z_cmd": -0.5,
+        "avg_error_x": 0.07994629844774803,
+        "avg_error_omega_z": 0.044271263694390654
+    },
+    {
+        "v_x_cmd": -1.0,
+        "omega_z_cmd": 0.0,
+        "avg_error_x": 0.055878134687741596,
+        "avg_error_omega_z": 0.039211833275621756
+    },
+    {
+        "v_x_cmd": -1.0,
+        "omega_z_cmd": 0.5,
+        "avg_error_x": 0.07170414814352989,
+        "avg_error_omega_z": 0.05092986871798833
+    },
+    {
+        "v_x_cmd": -1.0,
+        "omega_z_cmd": 1.0,
+        "avg_error_x": 0.08542969628423452,
+        "avg_error_omega_z": 0.07162625364462534
+    },
+    {
+        "v_x_cmd": -0.5,
+        "omega_z_cmd": -1.0,
+        "avg_error_x": 0.027404682556788126,
+        "avg_error_omega_z": 0.053846716006596886
+    },
+    {
+        "v_x_cmd": -0.5,
+        "omega_z_cmd": -0.5,
+        "avg_error_x": 0.027079624772071837,
+        "avg_error_omega_z": 0.04132579104105631
+    },
+    {
+        "v_x_cmd": -0.5,
+        "omega_z_cmd": 0.0,
+        "avg_error_x": 0.02697318903605143,
+        "avg_error_omega_z": 0.04662634726964946
+    },
+    {
+        "v_x_cmd": -0.5,
+        "omega_z_cmd": 0.5,
+        "avg_error_x": 0.03648207064469655,
+        "avg_error_omega_z": 0.056110332782069845
+    },
+    {
+        "v_x_cmd": -0.5,
+        "omega_z_cmd": 1.0,
+        "avg_error_x": 0.03451163144906362,
+        "avg_error_omega_z": 0.06154099806149801
+    },
+    {
+        "v_x_cmd": 0.0,
+        "omega_z_cmd": -1.0,
+        "avg_error_x": 0.04802983278996544,
+        "avg_error_omega_z": 0.08266803417106469
+    },
+    {
+        "v_x_cmd": 0.0,
+        "omega_z_cmd": -0.5,
+        "avg_error_x": 0.032795124380422445,
+        "avg_error_omega_z": 0.07578102731704713
+    },
+    {
+        "v_x_cmd": 0.0,
+        "omega_z_cmd": 0.0,
+        "avg_error_x": 0.026851961017760915,
+        "avg_error_omega_z": 0.04243169578385035
+    },
+    {
+        "v_x_cmd": 0.0,
+        "omega_z_cmd": 0.5,
+        "avg_error_x": 0.021374941537161553,
+        "avg_error_omega_z": 0.0731486978388081
+    },
+    {
+        "v_x_cmd": 0.0,
+        "omega_z_cmd": 1.0,
+        "avg_error_x": 0.022578215592890048,
+        "avg_error_omega_z": 0.08441641922791798
+    },
+    {
+        "v_x_cmd": 0.5,
+        "omega_z_cmd": -1.0,
+        "avg_error_x": 0.10154388489574194,
+        "avg_error_omega_z": 0.06937254269917806
+    },
+    {
+        "v_x_cmd": 0.5,
+        "omega_z_cmd": -0.5,
+        "avg_error_x": 0.05510539344946543,
+        "avg_error_omega_z": 0.047791738788286846
+    },
+    {
+        "v_x_cmd": 0.5,
+        "omega_z_cmd": 0.0,
+        "avg_error_x": 0.0401429735571146,
+        "avg_error_omega_z": 0.05141299395221722
+    },
+    {
+        "v_x_cmd": 0.5,
+        "omega_z_cmd": 0.5,
+        "avg_error_x": 0.03262902804215749,
+        "avg_error_omega_z": 0.04922618146737417
+    },
+    {
+        "v_x_cmd": 0.5,
+        "omega_z_cmd": 1.0,
+        "avg_error_x": 0.04192862957219283,
+        "avg_error_omega_z": 0.059218342979749046
+    },
+    {
+        "v_x_cmd": 1.0,
+        "omega_z_cmd": -1.0,
+        "avg_error_x": 0.13749909019470216,
+        "avg_error_omega_z": 0.07915169835090637
+    },
+    {
+        "v_x_cmd": 1.0,
+        "omega_z_cmd": -0.5,
+        "avg_error_x": 0.09374066567420959,
+        "avg_error_omega_z": 0.06431302873293558
+    },
+    {
+        "v_x_cmd": 1.0,
+        "omega_z_cmd": 0.0,
+        "avg_error_x": 0.07994641962181777,
+        "avg_error_omega_z": 0.06184132755741788
+    },
+    {
+        "v_x_cmd": 1.0,
+        "omega_z_cmd": 0.5,
+        "avg_error_x": 0.07588892338673274,
+        "avg_error_omega_z": 0.06659744598468145
+    },
+    {
+        "v_x_cmd": 1.0,
+        "omega_z_cmd": 1.0,
+        "avg_error_x": 0.08714824618895849,
+        "avg_error_omega_z": 0.08055920286973317
+    }
+]

@@ -48,6 +48,7 @@ import gymnasium as gym
 import os
 import time
 import torch
+import numpy as np
 import json
 
 from rsl_rl.runners import OnPolicyRunner
@@ -99,7 +100,7 @@ def main():
     # wrap for video recording
     if args_cli.video:
         video_kwargs = {
-            "video_folder": os.path.join(log_dir, "videos", "play"),
+            "video_folder": os.path.join("./logs/"),
             "step_trigger": lambda step: step == 0,
             "video_length": args_cli.video_length,
             "disable_logger": True,
@@ -128,7 +129,7 @@ def main():
         # version 2.2 and below
         policy_nn = ppo_runner.alg.actor_critic
 
-    # export policy to onnx/jit
+    # Export policy to onnx/jit
     export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
     export_policy_as_jit(policy_nn, ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.pt")
     export_policy_as_onnx(
@@ -137,82 +138,97 @@ def main():
 
     dt = env.unwrapped.step_dt
 
-    # reset environment
     obs, _ = env.get_observations()
-    timestep = 0
+
+    # Evalaluation configuration
+    trials = 3 
+    trial_steps = 300
     warmup_steps = 50
-    trials = 3
-    buffer = []
+    results = []
+    buffer = [] # Tracking buffer
 
-    # simulate environment
-    while simulation_app.is_running():
-        start_time = time.time()
-        # run everything in inference mode
-        with torch.inference_mode():
+    # Evaluation for each pair
+    v_x_vals = np.linspace(-4, 4, 10)  # Velocities from -1 to 1 m/s (10 points)
+    omega_z_vals = np.linspace(-4, 4, 10)  # yaw rates from -1 to 1 rad/s (5 points)
 
-            command = torch.tensor([[1.0, 0.0, 0.0]], device=env.device)  # v_x = 0.5 m/s, omega_z = 0.5 rad/s
-            env.unwrapped._commands[:] = command
+    total_start_time = time.time()
 
-            # agent stepping
-            actions = policy(obs)
-            # env stepping
-            obs, _, _, _ = env.step(actions)
+    for v_x_cmd in v_x_vals:
+        for omega_z_cmd in omega_z_vals:
+            total_error_x = 0.0
+            total_error_omega_z = 0.0
+            count = 0
 
-            v_x = obs[0, 0].item()          # root_lin_vel_b x
-            omega_z = obs[0, 5].item()      # root_ang_vel_b z
+            print(f"\n[INFO] Evaluating: v_x={v_x_cmd:.2f}, omega_z={omega_z_cmd:.2f}")
 
-            target_v_x = obs[0, 9].item()   # comando v_x
-            target_omega_z = obs[0, 11].item()  # comando yaw
+            for trial in range(trials):
+                print(f"[INFO]  Trial {trial + 1}/{trials}")
+                obs, _ = env.get_observations()
+                timestep = 0
 
-            avg_tracking_error_x = abs(v_x - target_v_x)
-            avg_tracking_error_omega_z = abs(omega_z - target_omega_z)
+                while timestep < trial_steps and simulation_app.is_running():
+                    start_time = time.time()
 
-            if timestep >= warmup_steps:
-                print("Step: ", timestep)
-            else:
-                print("Warmup Step: ", timestep)
+                    with torch.inference_mode():
+                        command = torch.tensor([[v_x_cmd, 0.0, omega_z_cmd]], device=env.device)
+                        env.unwrapped._commands[:] = command
 
-            print(f'    "v_x": {v_x},')
-            print(f'    "omega_z": {omega_z},')
-            print(f'    "avg_tracking_error_x": {avg_tracking_error_x},')
-            print(f'    "avg_tracking_error_omega_z": {avg_tracking_error_omega_z}')
-            print("\n")
+                        actions = policy(obs)
+                        obs, _, _, _ = env.step(actions)
 
-            data = {
-                "v_x": v_x,
-                "omega_z": omega_z,
-                "avg_tracking_error_x": avg_tracking_error_x,
-                "avg_tracking_error_omega_z": avg_tracking_error_omega_z,
-            }
+                        v_x = obs[0, 0].item()
+                        omega_z = obs[0, 5].item()
+                        target_v_x = obs[0, 9].item()
+                        target_omega_z = obs[0, 11].item()
 
-            if timestep >= warmup_steps:
-                buffer.append(data)
+                        error_x = abs(v_x - target_v_x)
+                        error_omega_z = abs(omega_z - target_omega_z)
 
-            timestep += 1
-            if timestep >= 300:
-                break
+                        if timestep >= warmup_steps:
+                            total_error_x += error_x
+                            total_error_omega_z += error_omega_z
+                            count += 1
 
-        if args_cli.video:
-            timestep += 1
-            # Exit the play loop after recording one video
-            if timestep == args_cli.video_length:
-                break
+                        timestep += 1
 
-        # time delay for real-time evaluation
-        sleep_time = dt - (time.time() - start_time)
-        if args_cli.real_time and sleep_time > 0:
-            time.sleep(sleep_time)
+                        if timestep == trial_steps:
+                            obs, _ = env.reset()
 
-    output_path = os.path.join("./logs/tracking_log/trajectory_log.json")
+                    # Delay for real-time execution (optional)
+                    sleep_time = dt - (time.time() - start_time)
+                    if args_cli.real_time and sleep_time > 0:
+                        time.sleep(sleep_time)
+
+            avg_error_x = total_error_x / count if count > 0 else None
+            avg_error_omega_z = total_error_omega_z / count if count > 0 else None
+
+            print(f"[RESULT] MAE to v_x={v_x_cmd:.2f}, omega_z={omega_z_cmd:.2f} => "
+                  f"error_x={avg_error_x:.4f}, error_omega_z={avg_error_omega_z:.4f}, count={count}")
+
+            results.append({
+                "v_x_cmd": v_x_cmd,
+                "omega_z_cmd": omega_z_cmd,
+                "avg_error_x": avg_error_x,
+                "avg_error_omega_z": avg_error_omega_z,
+            })
+	    
+            if args_cli.video:
+                timestep += 1
+                if timestep == args_cli.video_length:
+                    break
+
+    # Salvando os resultados
+    os.makedirs("./logs/tracking_log", exist_ok=True)
+    output_path = os.path.join("./logs/tracking_log/average_error_log_teste.json")
     with open(output_path, "w") as f:
-        json.dump(buffer, f, indent=4)
-    print(f"[INFO] Trajectory log saved to: {output_path}")
+        json.dump(results, f, indent=4)
+    print(f"\n[INFO] Saved path: {output_path}")
 
-    # close the simulator
+    total_elapsed_time = time.time() - total_start_time
+    print(f"\n[INFO] Complete evaluation in {total_elapsed_time:.2f} seconds ({total_elapsed_time/60:.2f} minutes).")
+
     env.close()
 
 if __name__ == "__main__":
-    # run the main function
     main()
-    # close sim app
     simulation_app.close()
