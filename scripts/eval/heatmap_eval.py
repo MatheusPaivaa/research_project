@@ -2,9 +2,38 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 
-flat_flat_path = "./logs/tracking_log/average_error_log_flat_in_flat.json"
-flat_wave_path = "./logs/tracking_log/average_error_log_flat_in_wave.json"
-flat_stepping_path = "./logs/tracking_log/average_error_log_flat_in_stepping.json"
+# Lista com os logs e seus rótulos e flag opcional "b"
+# log_files = [
+#     {"name": "Flat", "path": "./logs/tracking_log/average_error_log_flat_in_flat.json", "b": True},
+#     {"name": "Wave", "path": "./logs/tracking_log/average_error_log_flat_in_wave.json"},
+#     {"name": "Stepping Stones", "path": "./logs/tracking_log/average_error_log_flat_in_stepping.json"},
+#     {"name": "Oil Flat", "path": "./logs/tracking_log/average_error_log_flat_in_oil.json"},
+#     {"name": "Pit", "path": "./logs/tracking_log/average_error_log_flat_in_pit.json"},
+# ]
+
+log_files = [
+    {"name": "Flat", "path": "./logs/tracking_log/average_error_log_flat_in_wave.json"},
+    {"name": "Wave", "path": "./logs/tracking_log/average_error_log_wave_in_wave.json", "b": True},
+    # {"name": "Stepping Stones", "path": "./logs/tracking_log/average_error_log_wave_in_stepping.json"},
+    # {"name": "Oil Flat", "path": "./logs/tracking_log/average_error_log_flat_in_oil.json"},
+    # {"name": "Pit", "path": "./logs/tracking_log/average_error_log_wave_in_pit.json"},
+]
+
+# log_files = [
+#     {"name": "Generalist - Flat", "path": "./logs/tracking_log/average_error_log_gen_in_flat.json"},
+#     {"name": "Generalist - Wave", "path": "./logs/tracking_log/average_error_log_gen_in_wave.json"},
+#     {"name": "Generalist - Stepping", "path": "./logs/tracking_log/average_error_log_gen_in_stepping.json"},
+#     {"name": "Generalist - Oil Flat", "path": "./logs/tracking_log/average_error_log_gen_in_oil.json"},
+#     {"name": "Generalist - Pit", "path": "./logs/tracking_log/average_error_log_gen_in_pit.json"},
+# ]
+
+log_files = [
+#     {"name": "Stepping - Flat", "path": "./logs/tracking_log/average_error_log_stepping_in_flat.json"},
+    {"name": "Stepping - Wave", "path": "./logs/tracking_log/average_error_log_stepping_in_wave.json"},
+    {"name": "Stepping - Stepping", "path": "./logs/tracking_log/average_error_log_stepping_in_stepping.json"},
+#     {"name": "Stepping - Oil Flat", "path": "./logs/tracking_log/average_error_log_stepping_in_oil.json"},
+#     {"name": "Stepping - Pit", "path": "./logs/tracking_log/average_error_log_stepping_in_pit.json"},
+]
 
 def load_error_data(path):
     with open(path, "r") as f:
@@ -24,55 +53,64 @@ def load_error_data(path):
 
     return error_x, error_omega, v_x_vals, omega_z_vals
 
-error_x_flat, error_omega_flat, v_x_vals, omega_z_vals = load_error_data(flat_flat_path)
-error_x_wave, error_omega_wave, _, _ = load_error_data(flat_wave_path)
-error_x_stepping, error_omega_stepping, _, _ = load_error_data(flat_stepping_path)
+all_error_x = []
+all_error_omega = []
+
+v_x_vals, omega_z_vals = None, None 
+
+for log in log_files:
+    error_x, error_omega, vx, wz = load_error_data(log["path"])
+    all_error_x.append(error_x)
+    all_error_omega.append(error_omega)
+    if v_x_vals is None:
+        v_x_vals, omega_z_vals = vx, wz  
 
 vmin = 0.005
-vmax = 1
+vmax = 2
 cmap = plt.get_cmap("Blues_r")
 
-fig, axs = plt.subplots(2, 3, figsize=(14, 6), gridspec_kw={'wspace': 0, 'hspace': 0.15})
-fig.subplots_adjust(top=0.92, bottom=0.08, left=0.06, right=0.85)
-titles = ["Flat", "Wave", "Stepping Stones"]
+fig, axs = plt.subplots(2, len(log_files), figsize=(14, 6), gridspec_kw={'wspace': 0.12, 'hspace': 0.05})
+fig.subplots_adjust(top=0.79, bottom=0.08, left=0.06, right=0.88)
 
-for col, (error, title) in enumerate(zip([error_x_flat, error_x_wave, error_x_stepping], titles)):
-    im = axs[0, col].imshow(error, origin="lower", cmap=cmap,
+for col, (error_x, log) in enumerate(zip(all_error_x, log_files)):
+    title = log["name"]
+    is_bold = log.get("b", False)
+
+    im = axs[0, col].imshow(error_x, origin="lower", cmap=cmap,
                             extent=[v_x_vals[0], v_x_vals[-1], omega_z_vals[0], omega_z_vals[-1]],
                             aspect='equal', vmin=vmin, vmax=vmax)
     axs[0, col].tick_params(labelbottom=False)
     axs[0, col].grid(alpha=0.2)
     if col != 0:
         axs[0, col].tick_params(labelleft=False)
-    if title == "Flat":
-        axs[0, col].set_title(title, fontname='DejaVu Serif')
-    else:
-        axs[0, col].set_title(title, fontname='DejaVu Serif') 
+
+    axs[0, col].set_title(
+        title,
+        fontname='DejaVu Serif',
+        fontweight='bold' if is_bold else 'normal',
+        color=cmap(0.08) if is_bold else 'black'
+    )
 
     for spine in axs[0, col].spines.values():
         spine.set_linewidth(1.3)
-        axs[0, col].tick_params(width=1.3, length=6)
-
+    axs[0, col].tick_params(width=1.3, length=6)
     axs[0, col].spines['right'].set_visible(False)
     axs[0, col].spines['top'].set_visible(False)
 
-for col, (error, title) in enumerate(zip([error_omega_flat, error_omega_wave, error_omega_stepping], titles)):
-    im = axs[1, col].imshow(error, origin="lower", cmap=cmap,
+for col, error_omega in enumerate(all_error_omega):
+    im = axs[1, col].imshow(error_omega, origin="lower", cmap=cmap,
                             extent=[v_x_vals[0], v_x_vals[-1], omega_z_vals[0], omega_z_vals[-1]],
                             aspect='equal', vmin=vmin, vmax=vmax)
     axs[1, col].tick_params(labelleft=False)
     if col == 0:
         axs[1, col].set_xlabel("$v_x$ [m/s]", fontname='DejaVu Serif')
         axs[1, col].set_ylabel("$\\omega_z$ [rad/s]", fontname='DejaVu Serif')
-        axs[1, col].tick_params(labelleft=True) 
+        axs[1, col].tick_params(labelleft=True)
     axs[1, col].grid(alpha=0.2)
-
     axs[1, col].tick_params(pad=10, width=2, length=6)
-
     for spine in axs[1, col].spines.values():
         spine.set_linewidth(1.3)
-        axs[1, col].tick_params(width=1, length=6)
-
+    axs[1, col].tick_params(width=1, length=6)
     axs[1, col].spines['right'].set_visible(False)
     axs[1, col].spines['top'].set_visible(False)
 

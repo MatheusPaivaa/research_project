@@ -8,6 +8,8 @@
 """Launch Isaac Sim Simulator first."""
 
 import argparse
+import collections
+from itertools import product
 
 from isaaclab.app import AppLauncher
 
@@ -148,78 +150,109 @@ def main():
     buffer = [] # Tracking buffer
 
     # Evaluation for each pair
-    v_x_vals = np.linspace(-4, 4, 10)  # Velocities from -1 to 1 m/s (10 points)
-    omega_z_vals = np.linspace(-4, 4, 10)  # yaw rates from -1 to 1 rad/s (5 points)
+    v_x_vals = np.linspace(-3, 3, 30)  # Velocities from -1 to 1 m/s (10 points)
+    omega_z_vals = np.linspace(-3, 3, 30)  # yaw rates from -1 to 1 rad/s (5 points)
+
+    combinations = list(product(v_x_vals, omega_z_vals))
+    chunks = np.array_split(combinations, args_cli.num_envs)
+    env_command_queues = {i: list(chunk) for i, chunk in enumerate(chunks)}
 
     total_start_time = time.time()
 
-    for v_x_cmd in v_x_vals:
-        for omega_z_cmd in omega_z_vals:
-            total_error_x = 0.0
-            total_error_omega_z = 0.0
-            count = 0
+    for step_index in range(len(env_command_queues[0])):
+        commands = []
+        for i in range(args_cli.num_envs):
+            v_x_cmd, omega_z_cmd = env_command_queues[i][step_index]
+            commands.append([v_x_cmd, 0.0, omega_z_cmd])
 
-            print(f"\n[INFO] Evaluating: v_x={v_x_cmd:.2f}, omega_z={omega_z_cmd:.2f}")
+        command_tensor = torch.tensor(commands, device=env.device)
 
-            for trial in range(trials):
-                print(f"[INFO]  Trial {trial + 1}/{trials}")
-                obs, _ = env.get_observations()
-                timestep = 0
+        print(f"\n[INFO] Avaliando passo {step_index + 1}/{len(env_command_queues[0])}")
+        for i, cmd in enumerate(commands):
+            print(f"  Env {i}: v_x={cmd[0]:.2f}, omega_z={cmd[2]:.2f}")
 
-                while timestep < trial_steps and simulation_app.is_running():
-                    start_time = time.time()
+        buffer = []
 
-                    with torch.inference_mode():
-                        command = torch.tensor([[v_x_cmd, 0.0, omega_z_cmd]], device=env.device)
-                        env.unwrapped._commands[:] = command
+        for trial in range(trials):
+            print(f"[INFO]  Trial {trial + 1}/{trials}")
+            obs, _ = env.get_observations()
+            timestep = 0
 
-                        actions = policy(obs)
-                        obs, _, _, _ = env.step(actions)
+            while timestep < trial_steps and simulation_app.is_running():
+                start_time = time.time()
+                with torch.inference_mode():
+                    env.unwrapped._commands[:] = command_tensor
 
-                        v_x = obs[0, 0].item()
-                        omega_z = obs[0, 5].item()
-                        target_v_x = obs[0, 9].item()
-                        target_omega_z = obs[0, 11].item()
+                    actions = policy(obs)
+                    obs, _, _, _ = env.step(actions)
 
+                    for i in range(args_cli.num_envs):
+                        v_x = obs[i, 0].item()
+                        omega_z = obs[i, 5].item()
+                        target_v_x = obs[i, 9].item()
+                        target_omega_z = obs[i, 11].item()
                         error_x = abs(v_x - target_v_x)
                         error_omega_z = abs(omega_z - target_omega_z)
-
                         if timestep >= warmup_steps:
-                            total_error_x += error_x
-                            total_error_omega_z += error_omega_z
-                            count += 1
+                            buffer.append({
+                                "env": i,
+                                "v_x_cmd": target_v_x,
+                                "omega_z_cmd": target_omega_z,
+                                "error_x": error_x,
+                                "error_omega_z": error_omega_z,
+                            })
 
-                        timestep += 1
-
-                        if timestep == trial_steps:
-                            obs, _ = env.reset()
+                    timestep += 1
+                    if timestep == trial_steps:
+                        obs, _ = env.reset()
 
                     # Delay for real-time execution (optional)
                     sleep_time = dt - (time.time() - start_time)
                     if args_cli.real_time and sleep_time > 0:
                         time.sleep(sleep_time)
 
-            avg_error_x = total_error_x / count if count > 0 else None
-            avg_error_omega_z = total_error_omega_z / count if count > 0 else None
-
-            print(f"[RESULT] MAE to v_x={v_x_cmd:.2f}, omega_z={omega_z_cmd:.2f} => "
-                  f"error_x={avg_error_x:.4f}, error_omega_z={avg_error_omega_z:.4f}, count={count}")
-
-            results.append({
-                "v_x_cmd": v_x_cmd,
-                "omega_z_cmd": omega_z_cmd,
-                "avg_error_x": avg_error_x,
-                "avg_error_omega_z": avg_error_omega_z,
+            results_per_env = collections.defaultdict(lambda: {
+                "sum_error_x": 0.0,
+                "sum_error_omega_z": 0.0,
+                "count": 0
             })
-	    
+
+            for entry in buffer:
+                env_idx = entry["env"]
+                results_per_env[env_idx]["sum_error_x"]        += entry["error_x"]
+                results_per_env[env_idx]["sum_error_omega_z"] += entry["error_omega_z"]
+                results_per_env[env_idx]["count"]             += 1
+
             if args_cli.video:
                 timestep += 1
                 if timestep == args_cli.video_length:
                     break
 
-    # Salvando os resultados
+        for env_id, data in results_per_env.items():             
+            count              = data["count"]
+            avg_error_x        = data["sum_error_x"]        / count
+            avg_error_omega_z  = data["sum_error_omega_z"]  / count
+
+            v_x_cmd, _, omega_z_cmd = commands[env_id]   
+
+            print(f"[RESULT][ENV {env_id}] => v_x={v_x_cmd:.2f}, "
+                f"omega_z={omega_z_cmd:.2f} | "
+                f"error_x={avg_error_x:.4f}, "
+                f"error_omega_z={avg_error_omega_z:.4f}, "
+                f"count={count}")
+
+            results.append({                                      
+                "v_x_cmd": v_x_cmd,
+                "omega_z_cmd": omega_z_cmd,
+                "avg_error_x": avg_error_x,
+                "avg_error_omega_z": avg_error_omega_z,
+                "count": count
+            })
+
+    results.sort(key=lambda x: (x["v_x_cmd"], x["omega_z_cmd"]))
+
     os.makedirs("./logs/tracking_log", exist_ok=True)
-    output_path = os.path.join("./logs/tracking_log/average_error_log_teste.json")
+    output_path = os.path.join("./logs/tracking_log/average_error_log_stepping_in_pit.json")
     with open(output_path, "w") as f:
         json.dump(results, f, indent=4)
     print(f"\n[INFO] Saved path: {output_path}")

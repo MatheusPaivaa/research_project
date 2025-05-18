@@ -2,7 +2,7 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 
-flat_flat_path = "./logs/tracking_log/average_error_log_teste.json"
+flat_flat_path = "./logs/tracking_log/average_error_log_flat_in_wave.json"
 
 def load_error_data(path):
     with open(path, "r") as f:
@@ -26,7 +26,7 @@ def load_error_data(path):
 error_x_flat, error_omega_flat, v_x_vals, omega_z_vals = load_error_data(flat_flat_path)
 
 vmin = 0.005
-vmax = 4
+vmax = 3
 cmap = plt.get_cmap("Blues_r")
 
 # Adjust to 2 rows and 1 column
