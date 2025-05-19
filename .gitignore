@@ -4,3 +4,9 @@ tests
 outputs
 ./logs
 logs
+run.py
+./run.py
+./logs
+logs
+./outputs
+outputs

@@ -153,7 +153,7 @@ def main():
 
     # Evaluation for each pair
     v_x_vals = np.linspace(-1, 1, 2)  # Velocities from -1 to 1 m/s (30 points)
-    omega_z_vals = np.linspace(-1, 1, 2)  # yaw rates from -1 to 1 rad/s (30 points)
+    omega_z_vals = np.linspace(-1, 1, 2)  # Yaw rates from -1 to 1 rad/s (30 points)
 
     combinations = list(product(v_x_vals, omega_z_vals))
     chunks = np.array_split(combinations, args_cli.num_envs)
