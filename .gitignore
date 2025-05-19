@@ -1,3 +1,9 @@
+logs/
+outputs/
+tests/
+run.py
+rsl_rl/
+
 # C++
 **/cmake-build*/
 **/build*/
