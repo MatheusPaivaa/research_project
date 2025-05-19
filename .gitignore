@@ -1,12 +1,4 @@
-./tests
-tests
-./outputs
-outputs
-./logs
-logs
+logs/
+outputs/
+tests/
 run.py
-./run.py
-./logs
-logs
-./outputs
-outputs
