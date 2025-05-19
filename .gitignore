@@ -1,2 +1,6 @@
 ./tests
 tests
+./outputs
+outputs
+./logs
+logs

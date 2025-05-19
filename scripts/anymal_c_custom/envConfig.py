@@ -1,10 +1,6 @@
-# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
-
 import os
 import sys
+import numpy as np
 
 scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if scripts_dir not in sys.path:
@@ -22,7 +18,6 @@ from isaaclab.sim import SimulationCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 
-# Pre-defined configs
 from isaaclab_assets.robots.anymal import ANYMAL_C_CFG
 from .terrain_generator_cfg import get_multiple_terrains_cfg, get_unique_terrain_cfg
 
@@ -52,7 +47,6 @@ class EventCfg:
         },
     )
 
-
 @configclass
 class AnymalCFlatEnvCfg(DirectRLEnvCfg):
 
@@ -77,6 +71,21 @@ class AnymalCFlatEnvCfg(DirectRLEnvCfg):
         ),
     )
 
+    # terrain = TerrainImporterCfg(
+    #     prim_path="/World/ground",
+    #     terrain_type="generator",
+    #     terrain_generator=get_unique_terrain_cfg(num_rows=10, num_cols=20),
+    #     max_init_terrain_level=9,
+    #     collision_group=-1,
+    #     physics_material=sim_utils.RigidBodyMaterialCfg(
+    #         friction_combine_mode="multiply",
+    #         restitution_combine_mode="multiply",
+    #         static_friction= np.clip(np.random.normal(0.3, 0.1), 0.0, 1.0),
+    #         dynamic_friction=1.0,
+    #     ),
+    #     debug_vis=False,
+    # )
+
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
         terrain_type="plane",
@@ -91,19 +100,31 @@ class AnymalCFlatEnvCfg(DirectRLEnvCfg):
         debug_vis=False,
     )
 
-    # Scene
+    # terrain = TerrainImporterCfg(
+    #     prim_path="/World/ground",          # onde o plano será criado no stage USD
+    #     terrain_type="plane",               # geometria plana infinita
+    #     collision_group=-1,                 # mantém o grupo default
+    #     physics_material=sim_utils.RigidBodyMaterialCfg(
+    #         friction_combine_mode="min",
+    #         restitution_combine_mode="multiply",
+
+    #         # Óleo → atritos muito pequenos
+    #         static_friction=0.05,           # t_s ≈ μ_s ≃ 0,05 (óleos leves em aço)
+    #         dynamic_friction=0.03,          # t_k ≈ μ_k ≃ 0,03
+    #         restitution=0.0,                # sem quique
+    #     ),
+    #     debug_vis=False,                    # desliga malha de depuração
+    # )
+
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=25.0, replicate_physics=True)
 
-    # Events
     events: EventCfg = EventCfg()
 
-    # Robot
     robot: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="/World/envs/env_.*/Robot")
     contact_sensor: ContactSensorCfg = ContactSensorCfg(
         prim_path="/World/envs/env_.*/Robot/.*", history_length=3, update_period=0.005, track_air_time=True
     )
 
-    # Reward scales
     lin_vel_reward_scale = 1.0
     yaw_rate_reward_scale = 0.5
     z_vel_reward_scale = -2.0
@@ -125,17 +146,60 @@ class AnymalCRoughEnvCfg(AnymalCFlatEnvCfg):
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
         terrain_type="generator",
-        terrain_generator=get_unique_terrain_cfg(num_rows=10, num_cols=20),
+        terrain_generator=get_multiple_terrains_cfg(num_rows=10, num_cols=20),
         max_init_terrain_level=9,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
             restitution_combine_mode="multiply",
-            static_friction=1.0,
-            dynamic_friction=1.0,
+            static_friction = float(np.clip(np.random.normal(0.4, 0.15), 0.05, 0.9)),
+            dynamic_friction = float(np.clip(np.random.normal(0.3, 0.1), 0.03, 0.8))
         ),
         debug_vis=False,
     )
+
+    # terrain = TerrainImporterCfg(
+    #     prim_path="/World/ground",
+    #     terrain_type="plane",
+    #     collision_group=-1,
+    #     physics_material=sim_utils.RigidBodyMaterialCfg(
+    #         friction_combine_mode="multiply",
+    #         restitution_combine_mode="multiply",
+    #         static_friction=1.0,
+    #         dynamic_friction=1.0,
+    #         restitution=0.0,
+    #     ),
+    #     debug_vis=False,
+    # )
+
+    # terrain = TerrainImporterCfg(
+    #     prim_path="/World/ground", 
+    #     terrain_type="plane",               
+    #     collision_group=-1,                 
+    #     physics_material=sim_utils.RigidBodyMaterialCfg(
+    #         friction_combine_mode="min",
+    #         restitution_combine_mode="multiply",
+    #         static_friction=0.2,
+    #         dynamic_friction=0.15,        
+    #         restitution=0.0,                
+    #     ),
+    #     debug_vis=False,                    
+    # )
+
+    # terrain = TerrainImporterCfg(
+    #     prim_path="/World/ground",
+    #     terrain_type="generator",
+    #     terrain_generator=get_unique_terrain_cfg(num_rows=10, num_cols=20),
+    #     max_init_terrain_level=9,
+    #     collision_group=-1,
+    #     physics_material=sim_utils.RigidBodyMaterialCfg(
+    #         friction_combine_mode="multiply",
+    #         restitution_combine_mode="multiply",
+    #         static_friction = float(np.clip(np.random.normal(0.4, 0.15), 0.05, 0.9)),
+    #         dynamic_friction = float(np.clip(np.random.normal(0.3, 0.1), 0.03, 0.8))
+    #     ),
+    #     debug_vis=False,
+    # )
 
     # Height scanner
     height_scanner = RayCasterCfg(
@@ -147,5 +211,4 @@ class AnymalCRoughEnvCfg(AnymalCFlatEnvCfg):
         mesh_prim_paths=["/World/ground"],
     )
 
-    # Reward scales (override from flat config)
     flat_orientation_reward_scale = 0.0
