@@ -71,50 +71,20 @@ class AnymalCFlatEnvCfg(DirectRLEnvCfg):
         ),
     )
 
-    # terrain = TerrainImporterCfg(
-    #     prim_path="/World/ground",
-    #     terrain_type="generator",
-    #     terrain_generator=get_unique_terrain_cfg(num_rows=10, num_cols=20),
-    #     max_init_terrain_level=9,
-    #     collision_group=-1,
-    #     physics_material=sim_utils.RigidBodyMaterialCfg(
-    #         friction_combine_mode="multiply",
-    #         restitution_combine_mode="multiply",
-    #         static_friction= np.clip(np.random.normal(0.3, 0.1), 0.0, 1.0),
-    #         dynamic_friction=1.0,
-    #     ),
-    #     debug_vis=False,
-    # )
-
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
-        terrain_type="plane",
+        terrain_type="generator",
+        terrain_generator=get_unique_terrain_cfg(num_rows=10, num_cols=20, selected_terrain="flat"),
+        max_init_terrain_level=9,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
             restitution_combine_mode="multiply",
             static_friction=1.0,
             dynamic_friction=1.0,
-            restitution=0.0,
         ),
         debug_vis=False,
     )
-
-    # terrain = TerrainImporterCfg(
-    #     prim_path="/World/ground",          # onde o plano será criado no stage USD
-    #     terrain_type="plane",               # geometria plana infinita
-    #     collision_group=-1,                 # mantém o grupo default
-    #     physics_material=sim_utils.RigidBodyMaterialCfg(
-    #         friction_combine_mode="min",
-    #         restitution_combine_mode="multiply",
-
-    #         # Óleo → atritos muito pequenos
-    #         static_friction=0.05,           # t_s ≈ μ_s ≃ 0,05 (óleos leves em aço)
-    #         dynamic_friction=0.03,          # t_k ≈ μ_k ≃ 0,03
-    #         restitution=0.0,                # sem quique
-    #     ),
-    #     debug_vis=False,                    # desliga malha de depuração
-    # )
 
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=25.0, replicate_physics=True)
 
@@ -143,63 +113,35 @@ class AnymalCRoughEnvCfg(AnymalCFlatEnvCfg):
     # Env config
     observation_space = 235
 
-    terrain = TerrainImporterCfg(
-        prim_path="/World/ground",
-        terrain_type="generator",
-        terrain_generator=get_multiple_terrains_cfg(num_rows=10, num_cols=20),
-        max_init_terrain_level=9,
-        collision_group=-1,
-        physics_material=sim_utils.RigidBodyMaterialCfg(
-            friction_combine_mode="multiply",
-            restitution_combine_mode="multiply",
-            static_friction = float(np.clip(np.random.normal(0.4, 0.15), 0.05, 0.9)),
-            dynamic_friction = float(np.clip(np.random.normal(0.3, 0.1), 0.03, 0.8))
-        ),
-        debug_vis=False,
-    )
-
-    # terrain = TerrainImporterCfg(
-    #     prim_path="/World/ground",
-    #     terrain_type="plane",
-    #     collision_group=-1,
-    #     physics_material=sim_utils.RigidBodyMaterialCfg(
-    #         friction_combine_mode="multiply",
-    #         restitution_combine_mode="multiply",
-    #         static_friction=1.0,
-    #         dynamic_friction=1.0,
-    #         restitution=0.0,
-    #     ),
-    #     debug_vis=False,
-    # )
-
-    # terrain = TerrainImporterCfg(
-    #     prim_path="/World/ground", 
-    #     terrain_type="plane",               
-    #     collision_group=-1,                 
-    #     physics_material=sim_utils.RigidBodyMaterialCfg(
-    #         friction_combine_mode="min",
-    #         restitution_combine_mode="multiply",
-    #         static_friction=0.2,
-    #         dynamic_friction=0.15,        
-    #         restitution=0.0,                
-    #     ),
-    #     debug_vis=False,                    
-    # )
-
     # terrain = TerrainImporterCfg(
     #     prim_path="/World/ground",
     #     terrain_type="generator",
-    #     terrain_generator=get_unique_terrain_cfg(num_rows=10, num_cols=20),
+    #     terrain_generator=get_multiple_terrains_cfg(num_rows=10, num_cols=20),
     #     max_init_terrain_level=9,
     #     collision_group=-1,
     #     physics_material=sim_utils.RigidBodyMaterialCfg(
     #         friction_combine_mode="multiply",
     #         restitution_combine_mode="multiply",
-    #         static_friction = float(np.clip(np.random.normal(0.4, 0.15), 0.05, 0.9)),
-    #         dynamic_friction = float(np.clip(np.random.normal(0.3, 0.1), 0.03, 0.8))
+    #         static_friction = 1.0,
+    #         dynamic_friction = 1.0
     #     ),
     #     debug_vis=False,
     # )
+
+    terrain = TerrainImporterCfg(
+        prim_path="/World/ground",
+        terrain_type="generator",
+        terrain_generator=get_unique_terrain_cfg(num_rows=1, num_cols=1, selected_terrain="flat"),
+        max_init_terrain_level=9,
+        collision_group=-1,
+        physics_material=sim_utils.RigidBodyMaterialCfg(
+            friction_combine_mode="multiply",
+            restitution_combine_mode="multiply",
+            static_friction = 1.0,
+            dynamic_friction = 1.0
+        ),
+        debug_vis=False,
+    )
 
     # Height scanner
     height_scanner = RayCasterCfg(

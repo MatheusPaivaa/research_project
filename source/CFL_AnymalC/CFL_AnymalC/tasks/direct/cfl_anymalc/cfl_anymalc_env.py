@@ -13,10 +13,9 @@ from isaaclab.assets import Articulation
 from isaaclab.envs import DirectRLEnv
 from isaaclab.sensors import ContactSensor, RayCaster
 
-from .envConfig import AnymalCFlatEnvCfg, AnymalCRoughEnvCfg
+from .cfl_anymalc_env_cfg import AnymalCFlatEnvCfg, AnymalCRoughEnvCfg
 
-
-class AnymalCEnv(DirectRLEnv):
+class CFLAnymalCEnv(DirectRLEnv):
     cfg: AnymalCFlatEnvCfg | AnymalCRoughEnvCfg
 
     def __init__(self, cfg: AnymalCFlatEnvCfg | AnymalCRoughEnvCfg, render_mode: str | None = None, **kwargs):

@@ -46,6 +46,7 @@ if args_cli.video:
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
+
 """Rest everything follows."""
 
 import gymnasium as gym
@@ -69,6 +70,7 @@ from isaaclab_tasks.utils import get_checkpoint_path, parse_env_cfg
 
 # PLACEHOLDER: Extension template (do not remove this comment)
 
+import CFL_AnymalC.tasks
 
 def main():
     """Play with RSL-RL agent."""

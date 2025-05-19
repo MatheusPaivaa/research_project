@@ -1,0 +1,10 @@
+pyproject.toml
+setup.py
+CFL_AnymalC/__init__.py
+CFL_AnymalC/ui_extension_example.py
+CFL_AnymalC.egg-info/PKG-INFO
+CFL_AnymalC.egg-info/SOURCES.txt
+CFL_AnymalC.egg-info/dependency_links.txt
+CFL_AnymalC.egg-info/not-zip-safe
+CFL_AnymalC.egg-info/requires.txt
+CFL_AnymalC.egg-info/top_level.txt
