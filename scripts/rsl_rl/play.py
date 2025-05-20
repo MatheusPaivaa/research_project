@@ -25,8 +25,8 @@ parser.add_argument(
 )
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
-parser.add_argument("--trained", type=str, default=None, help="Name of the trained.")
-parser.add_argument("--env", type=str, default=None, help="Name of the env.")
+parser.add_argument("--trained_terrain", type=str, default="flat", help="Name of the trained terrain.")
+parser.add_argument("--tested_terrain", type=str, default="flat", help="Name of the tested terrain.")
 parser.add_argument(
     "--use_pretrained_checkpoint",
     action="store_true",
@@ -61,6 +61,7 @@ from rsl_rl.runners import OnPolicyRunner
 from isaaclab.envs import DirectMARLEnv, multi_agent_to_single_agent
 from isaaclab.utils.assets import retrieve_file_path
 from isaaclab.utils.dict import print_dict
+import isaaclab.sim as sim_utils
 from isaaclab.utils.pretrained_checkpoint import get_published_pretrained_checkpoint
 
 from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlVecEnvWrapper, export_policy_as_jit, export_policy_as_onnx
@@ -70,6 +71,8 @@ from isaaclab_tasks.utils import get_checkpoint_path, parse_env_cfg
 
 # PLACEHOLDER: Extension template (do not remove this comment)
 
+from terrain_generator_cfg import get_terrain_cfg
+
 import CFL_AnymalC.tasks
 
 def main():
@@ -78,6 +81,29 @@ def main():
     env_cfg = parse_env_cfg(
         args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
     )
+
+    env_cfg.terrain.terrain_generator = get_terrain_cfg(
+        selected_terrain = args_cli.tested_terrain,
+        num_rows = 10,
+        num_cols = 20,
+        eval = True,
+    )
+
+    if args_cli.tested_terrain == "flat_oil":
+        env_cfg.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
+            friction_combine_mode = "multiply",
+            restitution_combine_mode = "multiply",
+            static_friction = 0.15,
+            dynamic_friction = 0.10,
+        )
+    else:
+        env_cfg.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
+            friction_combine_mode = "multiply",
+            restitution_combine_mode = "multiply",
+            static_friction = 1.0,
+            dynamic_friction = 1.0,
+        )
+
     agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
 
     # specify directory for logging experiments
@@ -154,8 +180,8 @@ def main():
     buffer = []
 
     # Evaluation for each pair
-    v_x_vals = np.linspace(-1, 1, 2)  # Velocities from -1 to 1 m/s (30 points)
-    omega_z_vals = np.linspace(-1, 1, 2)  # Yaw rates from -1 to 1 rad/s (30 points)
+    v_x_vals = np.linspace(-3, 3, 30)  # Velocities from -1 to 1 m/s (30 points)
+    omega_z_vals = np.linspace(-3, 3, 30)  # Yaw rates from -1 to 1 rad/s (30 points)
 
     combinations = list(product(v_x_vals, omega_z_vals))
     chunks = np.array_split(combinations, args_cli.num_envs)
@@ -256,7 +282,7 @@ def main():
     results.sort(key=lambda x: (x["v_x_cmd"], x["omega_z_cmd"]))
 
     os.makedirs("./logs/tracking_log", exist_ok=True)
-    output_path = os.path.join(f"./logs/tracking_log/average_error_log_{args_cli.trained}_in_{args_cli.env}.json")
+    output_path = os.path.join(f"./logs/tracking_log/average_error_log_{args_cli.trained_terrain}_in_{args_cli.tested_terrain}.json")
     with open(output_path, "w") as f:
         json.dump(results, f, indent=4)
     print(f"\n[INFO] Saved path: {output_path}")

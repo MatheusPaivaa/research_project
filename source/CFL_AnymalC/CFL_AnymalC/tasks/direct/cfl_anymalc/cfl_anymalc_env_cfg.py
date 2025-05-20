@@ -19,7 +19,7 @@ from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 
 from isaaclab_assets.robots.anymal import ANYMAL_C_CFG
-from .terrain_generator_cfg import get_multiple_terrains_cfg, get_unique_terrain_cfg
+from .terrain_generator_cfg import get_terrain_cfg
 
 @configclass
 class EventCfg:
@@ -74,7 +74,7 @@ class AnymalCFlatEnvCfg(DirectRLEnvCfg):
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
         terrain_type="generator",
-        terrain_generator=get_unique_terrain_cfg(num_rows=10, num_cols=20, selected_terrain="flat"),
+        terrain_generator=get_terrain_cfg(num_rows=10, num_cols=20, selected_terrain="flat"),
         max_init_terrain_level=9,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
@@ -113,25 +113,10 @@ class AnymalCRoughEnvCfg(AnymalCFlatEnvCfg):
     # Env config
     observation_space = 235
 
-    # terrain = TerrainImporterCfg(
-    #     prim_path="/World/ground",
-    #     terrain_type="generator",
-    #     terrain_generator=get_multiple_terrains_cfg(num_rows=10, num_cols=20),
-    #     max_init_terrain_level=9,
-    #     collision_group=-1,
-    #     physics_material=sim_utils.RigidBodyMaterialCfg(
-    #         friction_combine_mode="multiply",
-    #         restitution_combine_mode="multiply",
-    #         static_friction = 1.0,
-    #         dynamic_friction = 1.0
-    #     ),
-    #     debug_vis=False,
-    # )
-
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
         terrain_type="generator",
-        terrain_generator=get_unique_terrain_cfg(num_rows=1, num_cols=1, selected_terrain="flat"),
+        terrain_generator=get_terrain_cfg(num_rows=1, num_cols=1),
         max_init_terrain_level=9,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
@@ -154,3 +139,24 @@ class AnymalCRoughEnvCfg(AnymalCFlatEnvCfg):
     )
 
     flat_orientation_reward_scale = 0.0
+
+
+@configclass
+class AnymalCDefaultEnvCfg(AnymalCFlatEnvCfg):
+
+    terrain = TerrainImporterCfg(
+        prim_path="/World/ground",
+        terrain_type="generator",
+        terrain_generator=get_terrain_cfg(num_rows=10, num_cols=20),
+        max_init_terrain_level=9,
+        collision_group=-1,
+        physics_material=sim_utils.RigidBodyMaterialCfg(
+            friction_combine_mode="multiply",
+            restitution_combine_mode="multiply",
+            static_friction = 1.0,
+            dynamic_friction = 1.0
+        ),
+        debug_vis=False,
+    )
+
+    flat_orientation_reward_scale = -2.5

@@ -17,9 +17,9 @@ parser.add_argument("--video_length", type=int, default=200, help="Length of the
 parser.add_argument("--video_interval", type=int, default=2000, help="Interval between video recordings (in steps).")
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
-parser.add_argument("--folder_name", type=str, default=None, help="Name of terrain folder.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--max_iterations", type=int, default=None, help="RL Policy training iterations.")
+parser.add_argument("--terrain", type=str, default=None, help="Terrain type")
 parser.add_argument(
     "--distributed", action="store_true", default=False, help="Run training with multiple GPUs or nodes."
 )
@@ -66,6 +66,7 @@ if args_cli.distributed and version.parse(installed_version) < version.parse(RSL
 
 import gymnasium as gym
 import os
+import numpy as np
 import torch
 from datetime import datetime
 
@@ -80,7 +81,7 @@ from isaaclab.envs import (
 )
 from isaaclab.utils.dict import print_dict
 from isaaclab.utils.io import dump_pickle, dump_yaml
-
+import isaaclab.sim as sim_utils
 from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlVecEnvWrapper
 
 import isaaclab_tasks  # noqa: F401
@@ -95,6 +96,7 @@ torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
 import CFL_AnymalC.tasks  # noqa: F401
+from terrain_generator_cfg import get_terrain_cfg
 
 @hydra_task_config(args_cli.task, "rsl_rl_cfg_entry_point")
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: RslRlOnPolicyRunnerCfg):
@@ -103,6 +105,36 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     agent_cfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
     
     env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
+    
+    if args_cli.terrain is not None:
+        env_cfg.terrain.terrain_generator = get_terrain_cfg(
+            selected_terrain=args_cli.terrain,
+            num_rows=10,
+            num_cols=20,
+        )
+
+    if args_cli.terrain == "flat_oil":
+        env_cfg.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
+            friction_combine_mode="multiply",
+            restitution_combine_mode="multiply",
+            static_friction=0.2,
+            dynamic_friction=0.15,
+        )
+    elif args_cli.terrain == "all":
+        env_cfg.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
+            friction_combine_mode="multiply",
+            restitution_combine_mode="multiply",
+            static_friction=float(np.clip(np.random.normal(0.4, 0.15), 0.05, 0.9)),
+            dynamic_friction=float(np.clip(np.random.normal(0.3, 0.1), 0.03, 0.8)),
+        )
+    else:
+        env_cfg.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
+            friction_combine_mode="multiply",
+            restitution_combine_mode="multiply",
+            static_friction=1.0,
+            dynamic_friction=1.0,
+        )
+        
     agent_cfg.max_iterations = (
         args_cli.max_iterations if args_cli.max_iterations is not None else agent_cfg.max_iterations
     )
@@ -129,8 +161,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # specify directory for logging runs: {time-stamp}_{run_name}
     log_dir = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-    if args_cli.folder_name is not None:
-        log_dir = args_cli.folder_name 
+    if args_cli.terrain is not None:
+        if args_cli.terrain == "all":
+            log_dir = "generalist"
+        else:
+            log_dir = args_cli.terrain 
     
     # This way, the Ray Tune workflow can extract experiment name.
     print(f"Exact experiment name requested from command line: {log_dir}")
