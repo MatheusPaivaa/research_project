@@ -23,6 +23,7 @@ parser.add_argument("--video_length", type=int, default=200, help="Length of the
 parser.add_argument(
     "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
 )
+parser.add_argument("--unique", action="store_true", default=False, help="Enable unique env for testing")
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--trained_terrain", type=str, default="flat", help="Name of the trained terrain.")
@@ -77,17 +78,29 @@ import CFL_AnymalC.tasks
 
 def main():
     """Play with RSL-RL agent."""
+
+    if args_cli.unique: 
+        args_cli.num_envs = 1
+
     # parse configuration
     env_cfg = parse_env_cfg(
         args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
     )
 
-    env_cfg.terrain.terrain_generator = get_terrain_cfg(
-        selected_terrain = args_cli.tested_terrain,
-        num_rows = 10,
-        num_cols = 20,
-        eval = True,
-    )
+    if args_cli.unique:
+        env_cfg.terrain.terrain_generator = get_terrain_cfg(
+            selected_terrain = args_cli.tested_terrain,
+            num_rows = 1,
+            num_cols = 1,
+            eval = True,
+        )
+    else:
+        env_cfg.terrain.terrain_generator = get_terrain_cfg(
+            selected_terrain = args_cli.tested_terrain,
+            num_rows = 10,
+            num_cols = 20,
+            eval = True,
+        )
 
     if args_cli.tested_terrain == "flat_oil":
         env_cfg.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
@@ -180,8 +193,8 @@ def main():
     buffer = []
 
     # Evaluation for each pair
-    v_x_vals = np.linspace(-3, 3, 30)  # Velocities from -1 to 1 m/s (30 points)
-    omega_z_vals = np.linspace(-3, 3, 30)  # Yaw rates from -1 to 1 rad/s (30 points)
+    v_x_vals = np.linspace(-3, 3, 30)  # Velocities from -3 to 3 m/s (30 points)
+    omega_z_vals = np.linspace(-3, 3, 30)  # Yaw rates from -3 to 3 rad/s (30 points)
 
     combinations = list(product(v_x_vals, omega_z_vals))
     chunks = np.array_split(combinations, args_cli.num_envs)
@@ -192,8 +205,13 @@ def main():
     for step_index in range(len(env_command_queues[0])):
         commands = []
         for i in range(args_cli.num_envs):
+
             v_x_cmd, omega_z_cmd = env_command_queues[i][step_index]
-            commands.append([v_x_cmd, 0.0, omega_z_cmd])
+
+            if args_cli.unique:
+                commands.append([1.0, 0.0, 1.0])
+            else:
+                commands.append([v_x_cmd, 0.0, omega_z_cmd])
 
         command_tensor = torch.tensor(commands, device=env.device)
 
@@ -215,7 +233,7 @@ def main():
 
                     actions = policy(obs)
                     obs, _, _, _ = env.step(actions)
-
+                    
                     for i in range(args_cli.num_envs):
                         v_x = obs[i, 0].item()
                         omega_z = obs[i, 5].item()

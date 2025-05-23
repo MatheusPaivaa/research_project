@@ -3,6 +3,7 @@ outputs/
 tests/
 run.py
 rsl_rl/
+plots/
 
 # C++
 **/cmake-build*/

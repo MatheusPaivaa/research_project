@@ -79,11 +79,11 @@ class CFLAnymalCEnv(DirectRLEnv):
 
     def _get_observations(self) -> dict:
         self._previous_actions = self._actions.clone()
-        height_data = None
-        if isinstance(self.cfg, AnymalCRoughEnvCfg):
-            height_data = (
-                self._height_scanner.data.pos_w[:, 2].unsqueeze(1) - self._height_scanner.data.ray_hits_w[..., 2] - 0.5
-            ).clip(-1.0, 1.0)
+        # height_data = None
+        # if isinstance(self.cfg, AnymalCRoughEnvCfg):
+            # height_data = (
+            #     self._height_scanner.data.pos_w[:, 2].unsqueeze(1) - self._height_scanner.data.ray_hits_w[..., 2] - 0.5
+            # ).clip(-1.0, 1.0)
         obs = torch.cat(
             [
                 tensor
@@ -94,7 +94,7 @@ class CFLAnymalCEnv(DirectRLEnv):
                     self._commands,
                     self._robot.data.joint_pos - self._robot.data.default_joint_pos,
                     self._robot.data.joint_vel,
-                    height_data,
+                    # height_data,
                     self._actions,
                 )
                 if tensor is not None
@@ -171,7 +171,7 @@ class CFLAnymalCEnv(DirectRLEnv):
         self._actions[env_ids] = 0.0
         self._previous_actions[env_ids] = 0.0
         # Sample new commands
-        self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(-1, 1)
+        self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(-1.5, 1.5)
         # Reset robot state
         joint_pos = self._robot.data.default_joint_pos[env_ids]
         joint_vel = self._robot.data.default_joint_vel[env_ids]

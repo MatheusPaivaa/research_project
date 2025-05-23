@@ -120,19 +120,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             static_friction=0.2,
             dynamic_friction=0.15,
         )
-    elif args_cli.terrain == "all":
+    else:
         env_cfg.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
             restitution_combine_mode="multiply",
             static_friction=float(np.clip(np.random.normal(0.4, 0.15), 0.05, 0.9)),
             dynamic_friction=float(np.clip(np.random.normal(0.3, 0.1), 0.03, 0.8)),
-        )
-    else:
-        env_cfg.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
-            friction_combine_mode="multiply",
-            restitution_combine_mode="multiply",
-            static_friction=1.0,
-            dynamic_friction=1.0,
         )
         
     agent_cfg.max_iterations = (

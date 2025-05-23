@@ -116,7 +116,7 @@ class AnymalCRoughEnvCfg(AnymalCFlatEnvCfg):
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
         terrain_type="generator",
-        terrain_generator=get_terrain_cfg(num_rows=1, num_cols=1),
+        terrain_generator=get_terrain_cfg(num_rows=10, num_cols=20),
         max_init_terrain_level=9,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
@@ -159,4 +159,4 @@ class AnymalCDefaultEnvCfg(AnymalCFlatEnvCfg):
         debug_vis=False,
     )
 
-    flat_orientation_reward_scale = -2.5
+    flat_orientation_reward_scale = -3
