@@ -95,7 +95,7 @@ torch.backends.cudnn.allow_tf32 = True
 torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
-import CFL_AnymalC.tasks  # noqa: F401
+import CFLAnymalC.tasks  # noqa: F401
 from terrain_generator_cfg import get_terrain_cfg
 
 @hydra_task_config(args_cli.task, "rsl_rl_cfg_entry_point")
@@ -107,25 +107,27 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
     
     if args_cli.terrain is not None:
-        env_cfg.terrain.terrain_generator = get_terrain_cfg(
+        env_cfg.scene.terrain.terrain_generator = get_terrain_cfg(
             selected_terrain=args_cli.terrain,
             num_rows=10,
             num_cols=20,
         )
 
     if args_cli.terrain == "flat_oil":
-        env_cfg.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
+        env_cfg.scene.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
             restitution_combine_mode="multiply",
             static_friction=0.2,
             dynamic_friction=0.15,
         )
+    if args_cli.terrain == "flat":
+        pass
     else:
-        env_cfg.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
+        env_cfg.scene.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
             restitution_combine_mode="multiply",
-            static_friction=float(np.clip(np.random.normal(0.4, 0.15), 0.05, 0.9)),
-            dynamic_friction=float(np.clip(np.random.normal(0.3, 0.1), 0.03, 0.8)),
+            static_friction=1,
+            dynamic_friction=1,
         )
         
     agent_cfg.max_iterations = (

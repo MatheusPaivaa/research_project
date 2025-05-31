@@ -3,17 +3,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
-# Criar diretório para salvar imagens
 os.makedirs("plots", exist_ok=True)
 
-# Lista unificada de todos os logs
 log_files = [
-    # Generalist
-    {"name": "Generalist → Flat", "path": "./logs/tracking_log/average_error_log_generalist_in_flat.json"},
-    {"name": "Generalist → Wave", "path": "./logs/tracking_log/average_error_log_generalist_in_waves.json"},
-    {"name": "Generalist → Boxes", "path": "./logs/tracking_log/average_error_log_generalist_in_boxes.json"},
-    {"name": "Generalist → Stepping", "path": "./logs/tracking_log/average_error_log_generalist_in_stepping_stones.json"},
-    {"name": "Generalist → Oil Flat", "path": "./logs/tracking_log/average_error_log_generalist_in_flat_oil.json"},
+    # # Generalist
+    # {"name": "Generalist → Flat", "path": "./logs/tracking_log/average_error_log_generalist_in_flat.json"},
+    # {"name": "Generalist → Wave", "path": "./logs/tracking_log/average_error_log_generalist_in_waves.json"},
+    # {"name": "Generalist → Boxes", "path": "./logs/tracking_log/average_error_log_generalist_in_boxes.json"},
+    # {"name": "Generalist → Stepping", "path": "./logs/tracking_log/average_error_log_generalist_in_stepping_stones.json"},
+    # {"name": "Generalist → Oil Flat", "path": "./logs/tracking_log/average_error_log_generalist_in_flat_oil.json"},
 
     # Flat
     {"name": "Flat → Flat", "path": "./logs/tracking_log/average_error_log_flat_in_flat.json", "b": True},
@@ -22,36 +20,35 @@ log_files = [
     {"name": "Flat → Stepping", "path": "./logs/tracking_log/average_error_log_flat_in_stepping_stones.json"},
     {"name": "Flat → Oil Flat", "path": "./logs/tracking_log/average_error_log_flat_in_flat_oil.json"},
 
-    # Wave
-    {"name": "Wave → Flat", "path": "./logs/tracking_log/average_error_log_waves_in_flat.json"},
-    {"name": "Wave → Wave", "path": "./logs/tracking_log/average_error_log_waves_in_waves.json", "b": True},
-    {"name": "Wave → Boxes", "path": "./logs/tracking_log/average_error_log_waves_in_boxes.json"},
-    {"name": "Wave → Stepping", "path": "./logs/tracking_log/average_error_log_waves_in_stepping_stones.json"},
-    {"name": "Wave → Oil Flat", "path": "./logs/tracking_log/average_error_log_waves_in_flat_oil.json"},
+    # # Wave
+    # {"name": "Wave → Flat", "path": "./logs/tracking_log/average_error_log_waves_in_flat.json"},
+    # {"name": "Wave → Wave", "path": "./logs/tracking_log/average_error_log_waves_in_waves.json", "b": True},
+    # {"name": "Wave → Boxes", "path": "./logs/tracking_log/average_error_log_waves_in_boxes.json"},
+    # {"name": "Wave → Stepping", "path": "./logs/tracking_log/average_error_log_waves_in_stepping_stones.json"},
+    # {"name": "Wave → Oil Flat", "path": "./logs/tracking_log/average_error_log_waves_in_flat_oil.json"},
 
-    # Boxes
-    {"name": "Boxes → Flat", "path": "./logs/tracking_log/average_error_log_boxes_in_flat.json"},
-    {"name": "Boxes → Wave", "path": "./logs/tracking_log/average_error_log_boxes_in_waves.json"},
-    {"name": "Boxes → Boxes", "path": "./logs/tracking_log/average_error_log_boxes_in_boxes.json", "b": True},
-    {"name": "Boxes → Stepping Stones", "path": "./logs/tracking_log/average_error_log_boxes_in_stepping_stones.json"},
-    {"name": "Boxes → Oil Flat", "path": "./logs/tracking_log/average_error_log_boxes_in_flat_oil.json"},
+    # # Boxes
+    # {"name": "Boxes → Flat", "path": "./logs/tracking_log/average_error_log_boxes_in_flat.json"},
+    # {"name": "Boxes → Wave", "path": "./logs/tracking_log/average_error_log_boxes_in_waves.json"},
+    # {"name": "Boxes → Boxes", "path": "./logs/tracking_log/average_error_log_boxes_in_boxes.json", "b": True},
+    # {"name": "Boxes → Stepping Stones", "path": "./logs/tracking_log/average_error_log_boxes_in_stepping_stones.json"},
+    # {"name": "Boxes → Oil Flat", "path": "./logs/tracking_log/average_error_log_boxes_in_flat_oil.json"},
 
-    # Stepping
-    {"name": "Stepping → Flat", "path": "./logs/tracking_log/average_error_log_stepping_stones_in_flat.json"},
-    {"name": "Stepping → Wave", "path": "./logs/tracking_log/average_error_log_stepping_stones_in_waves.json"},
-    {"name": "Stepping → Boxes", "path": "./logs/tracking_log/average_error_log_stepping_stones_in_boxes.json"},
-    {"name": "Stepping → Stepping", "path": "./logs/tracking_log/average_error_log_stepping_stones_in_stepping_stones.json", "b": True},
-    {"name": "Stepping → Oil Flat", "path": "./logs/tracking_log/average_error_log_stepping_stones_in_flat_oil.json"},
+    # # Stepping
+    # {"name": "Stepping → Flat", "path": "./logs/tracking_log/average_error_log_stepping_stones_in_flat.json"},
+    # {"name": "Stepping → Wave", "path": "./logs/tracking_log/average_error_log_stepping_stones_in_waves.json"},
+    # {"name": "Stepping → Boxes", "path": "./logs/tracking_log/average_error_log_stepping_stones_in_boxes.json"},
+    # {"name": "Stepping → Stepping", "path": "./logs/tracking_log/average_error_log_stepping_stones_in_stepping_stones.json", "b": True},
+    # {"name": "Stepping → Oil Flat", "path": "./logs/tracking_log/average_error_log_stepping_stones_in_flat_oil.json"},
 
-    # Oil Flat
-    {"name": "Oil Flat → Flat", "path": "./logs/tracking_log/average_error_log_flat_oil_in_flat.json"},
-    {"name": "Oil Flat → Wave", "path": "./logs/tracking_log/average_error_log_flat_oil_in_waves.json"},
-    {"name": "Oil Flat → Boxes", "path": "./logs/tracking_log/average_error_log_flat_oil_in_boxes.json"},
-    {"name": "Oil Flat → Stepping", "path": "./logs/tracking_log/average_error_log_flat_oil_in_stepping_stones.json"},
-    {"name": "Oil Flat → Oil Flat", "path": "./logs/tracking_log/average_error_log_flat_oil_in_flat_oil.json", "b": True},
+    # # Oil Flat
+    # {"name": "Oil Flat → Flat", "path": "./logs/tracking_log/average_error_log_flat_oil_in_flat.json"},
+    # {"name": "Oil Flat → Wave", "path": "./logs/tracking_log/average_error_log_flat_oil_in_waves.json"},
+    # {"name": "Oil Flat → Boxes", "path": "./logs/tracking_log/average_error_log_flat_oil_in_boxes.json"},
+    # {"name": "Oil Flat → Stepping", "path": "./logs/tracking_log/average_error_log_flat_oil_in_stepping_stones.json"},
+    # {"name": "Oil Flat → Oil Flat", "path": "./logs/tracking_log/average_error_log_flat_oil_in_flat_oil.json", "b": True},
 ]
 
-# Função para carregar os dados
 def load_error_data(path):
     with open(path, "r") as f:
         data = json.load(f)
@@ -66,7 +63,6 @@ def load_error_data(path):
         error_omega[i, j] = d["avg_error_omega_z"]
     return error_x, error_omega, v_x_vals, omega_z_vals
 
-# Agrupar os logs por origem
 from collections import defaultdict
 grouped_logs = defaultdict(list)
 for log in log_files:
@@ -94,7 +90,6 @@ for origin, logs in grouped_logs.items():
 
         titles.append(log["name"])
 
-    # print(f"\nGeneral Error: {log["name"]}")
     for name, err in general_errors:
         print(f"{name}: {err:.4f}")
 
@@ -138,4 +133,4 @@ for origin, logs in grouped_logs.items():
     plt.savefig(f"plots/{origin.replace(' ', '_').lower()}_to_others.png")
     plt.close(fig)
 
-print("Plots salvos em 'plots/'.")
+print("Saved on 'plots/'.")

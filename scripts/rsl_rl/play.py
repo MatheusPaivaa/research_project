@@ -10,6 +10,7 @@
 import argparse
 import collections
 from itertools import product
+import math
 
 from isaaclab.app import AppLauncher
 
@@ -73,8 +74,9 @@ from isaaclab_tasks.utils import get_checkpoint_path, parse_env_cfg
 # PLACEHOLDER: Extension template (do not remove this comment)
 
 from terrain_generator_cfg import get_terrain_cfg
+from command_fixed import FixedVelocityCommandCfg
 
-import CFL_AnymalC.tasks
+import CFLAnymalC.tasks
 
 def main():
     """Play with RSL-RL agent."""
@@ -87,15 +89,20 @@ def main():
         args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
     )
 
+    env_cfg.commands.base_velocity = FixedVelocityCommandCfg(
+        asset_name="robot",
+        default_command=[0.0, 0.0, 0.0]
+    )
+
     if args_cli.unique:
-        env_cfg.terrain.terrain_generator = get_terrain_cfg(
+        env_cfg.scene.terrain.terrain_generator = get_terrain_cfg(
             selected_terrain = args_cli.tested_terrain,
             num_rows = 1,
             num_cols = 1,
             eval = True,
         )
     else:
-        env_cfg.terrain.terrain_generator = get_terrain_cfg(
+        env_cfg.scene.terrain.terrain_generator = get_terrain_cfg(
             selected_terrain = args_cli.tested_terrain,
             num_rows = 10,
             num_cols = 20,
@@ -103,14 +110,14 @@ def main():
         )
 
     if args_cli.tested_terrain == "flat_oil":
-        env_cfg.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
+        env_cfg.scene.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode = "multiply",
             restitution_combine_mode = "multiply",
             static_friction = 0.15,
             dynamic_friction = 0.10,
         )
     else:
-        env_cfg.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
+        env_cfg.scene.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode = "multiply",
             restitution_combine_mode = "multiply",
             static_friction = 1.0,
@@ -141,6 +148,9 @@ def main():
     # convert to single-agent instance if required by the RL algorithm
     if isinstance(env.unwrapped, DirectMARLEnv):
         env = multi_agent_to_single_agent(env)
+
+    if not hasattr(env.unwrapped, "_commands"):
+        env.unwrapped._commands = torch.zeros((args_cli.num_envs, 3), device=args_cli.device)
 
     # wrap for video recording
     if args_cli.video:
@@ -182,7 +192,6 @@ def main():
     )
 
     dt = env.unwrapped.step_dt
-
     obs, _ = env.get_observations()
 
     # Evalaluation configuration
@@ -229,18 +238,26 @@ def main():
             while timestep < trial_steps and simulation_app.is_running():
                 start_time = time.time()
                 with torch.inference_mode():
-                    env.unwrapped._commands[:] = command_tensor
 
-                    actions = policy(obs)
+                    if trial == 0 and timestep == 0: env.reset()
+
+                    command_term = env.env.unwrapped.command_manager.get_term("base_velocity")
+                    command_term.update_commands(command_tensor)
+
+                    actions = policy(obs.float())
                     obs, _, _, _ = env.step(actions)
-                    
+
                     for i in range(args_cli.num_envs):
+
                         v_x = obs[i, 0].item()
                         omega_z = obs[i, 5].item()
+
                         target_v_x = obs[i, 9].item()
                         target_omega_z = obs[i, 11].item()
-                        error_x = abs(v_x - target_v_x)
-                        error_omega_z = abs(omega_z - target_omega_z)
+
+                        error_x = (v_x - target_v_x) ** 2
+                        error_omega_z = (omega_z - target_omega_z) ** 2
+
                         if timestep >= warmup_steps:
                             buffer.append({
                                 "env": i,
