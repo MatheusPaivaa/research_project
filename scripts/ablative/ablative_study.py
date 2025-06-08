@@ -100,8 +100,14 @@ testing_curriculum = [
     ]
 ]
 
+all_testing_commands = [
+    *[
+        "./lib/IsaacLab/isaaclab.sh -p ./scripts/rsl_rl/play.py --task CFL-AnymalC_Play_Rough_Task --num_envs 150 --checkpoint ./logs/rsl_rl/anymal_c_rough/generalist_bom/model_3999.pt --trained_terrain=generalist_bom --tested_terrain=" + terrain + " --headless"
+        for terrain in testing_terrains
+    ]
+]
 
-for cmd in (training_commands_rough):
+for cmd in (all_testing_commands):
     print(f"Running: {cmd}")
     process = subprocess.run(cmd, shell=True)
     

@@ -67,24 +67,12 @@ log_files = [
 ]
 
 log_files = [
-    # {"name": "Flat → Erro 0.05/0.15 | Step 0.2", "path": "./logs/tracking_log/average_error_log_generalist_in_step_02_005_015.json"},
-    # {"name": "Flat → Erro 0.15/0.25 | Step 0.2", "path": "./logs/tracking_log/average_error_log_generalist_in_step_05_005_015.json"},
-    # {"name": "Flat → Erro 0.05/0.05 | Step 0.5", "path": "./logs/tracking_log/average_error_log_generalist_in_step_05_005_015.json"},
-
-    # {"name": "Flat → Erro 0.15/0.25 | Step 0.5", "path": "./logs/tracking_log/average_error_log_generalist_in_step_05_015_025.json"},
-    # {"name": "Flat → Log. Decay | Step 0.2", "path": "./logs/tracking_log/average_error_log_generalist_in_log_decay_step_02.json"},
-    # {"name": "Flat → Log. Decay | Step 0.5", "path": "./logs/tracking_log/average_error_log_generalist_in_log_decay_step_05.json"},
-
-    {"name": "Flat → Delay (02_01_005) | Step 0.2", "path": "./logs/tracking_log/average_error_log_flat_in_flat_delay_02_01_005_step_02.json"},
-    {"name": "Flat → Delay (02_01_005) | Step 0.5", "path": "./logs/tracking_log/average_error_log_flat_in_flat_delay_02_01_005_step_05.json"},
-    {"name": "Flat → Delay (025_0125_005) | Step 0.2", "path": "./logs/tracking_log/average_error_log_flat_in_flat_delay_05_025_005_step_02_nolog.json"},
-    {"name": "Flat → Delay (05_025_005)  | Step 0.2", "path": "./logs/tracking_log/average_error_log_flat_in_flat_delay_025_0125_005_step_02.json"},
-]
-
-log_files = [
-    {"name": "Flat → Bench", "path": "./logs/tracking_log/average_error_log_flat_in_bench.json"},
-    {"name": "Flat → Delay", "path": "./logs/tracking_log/average_error_log_flat_in_delay.json"},
-    {"name": "Flat → Range1", "path": "./logs/tracking_log/average_error_log_flat_in_range1.json"},
+    # Generalist
+    {"name": "Generalist bom → Flat", "path": "./logs/tracking_log/average_error_log_generalist_bom_in_flat.json"},
+    {"name": "Generalist bom → Wave", "path": "./logs/tracking_log/average_error_log_generalist_bom_in_waves.json"},
+    {"name": "Generalist bom → Boxes", "path": "./logs/tracking_log/average_error_log_generalist_bom_in_boxes.json"},
+    {"name": "Generalist bom → Stepping", "path": "./logs/tracking_log/average_error_log_generalist_bom_in_stepping_stones.json"},
+    {"name": "Generalist bom → Oil Flat", "path": "./logs/tracking_log/average_error_log_generalist_bom_in_flat_oil.json"},
 ]
 
 def wrap_title(title, max_line_length=20):

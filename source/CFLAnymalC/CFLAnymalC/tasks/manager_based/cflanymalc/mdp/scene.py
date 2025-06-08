@@ -7,7 +7,7 @@ from isaaclab.sensors import ContactSensorCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
-from isaaclab_assets.robots.anymal import ANYMAL_C_CFG
+from isaaclab_assets.robots.anymal import ANYMAL_D_CFG
 
 from CFLAnymalC.tasks.manager_based.cflanymalc.mdp.terrain import get_terrain_cfg
 
@@ -32,7 +32,7 @@ class MySceneCfg(InteractiveSceneCfg):
     )
 
     # robots
-    robot: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    robot: ArticulationCfg = ANYMAL_D_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
     contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True)
     

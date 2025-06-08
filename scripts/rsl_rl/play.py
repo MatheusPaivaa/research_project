@@ -78,11 +78,11 @@ from isaaclab.managers import ObservationTermCfg as ObsTerm
 
 # PLACEHOLDER: Extension template (do not remove this comment)
 
-from CFLAnymalC.tasks.manager_based.cflanymalc.mdp.terrain import get_terrain_cfg
 from CFLAnymalC.tasks.manager_based.cflanymalc.mdp.command import FixedVelocityCommandCfg
 import rsl_rl_utils
 
 import CFLAnymalC.tasks
+from terrain_utils import apply_overrides_play
 
 def main():
     """Play with RSL-RL agent."""
@@ -101,70 +101,7 @@ def main():
             default_command=[0.0, 0.0, 0.0]
         )
 
-    if args_cli.tested_terrain != "sand" and args_cli.tested_terrain != "stepping_ice":
-        if args_cli.unique or args_cli.keyboard:
-            env_cfg.scene.terrain.terrain_generator = get_terrain_cfg(
-                selected_terrain = args_cli.tested_terrain,
-                num_rows = 1,
-                num_cols = 1,
-                eval = True,
-            )
-        else:
-            env_cfg.scene.terrain.terrain_generator = get_terrain_cfg(
-                selected_terrain = args_cli.tested_terrain,
-                num_rows = 10,
-                num_cols = 20,
-                eval = True,
-            )
-
-    if args_cli.tested_terrain == "flat_oil":
-        env_cfg.scene.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
-            friction_combine_mode = "multiply",
-            restitution_combine_mode = "multiply",
-            static_friction = 0.15,
-            dynamic_friction = 0.10,
-        )
-    elif args_cli.tested_terrain == "stepping_ice":
-        env_cfg.scene.terrain.terrain_generator = get_terrain_cfg(
-            selected_terrain="boxes",
-            num_rows=1,
-            num_cols=1,
-        )
-        env_cfg.scene.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
-            friction_combine_mode="multiply",
-            restitution_combine_mode="multiply",
-            static_friction=0.2,
-            dynamic_friction=0.15,
-        )
-    elif args_cli.tested_terrain == "sand":
-        env_cfg.scene.terrain.terrain_type = "plane"
-        env_cfg.scene.terrain.terrain_generator = None
-        env_cfg.scene.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
-            static_friction=1.2,
-            dynamic_friction=0.9, 
-            restitution=0.0,  
-
-            improve_patch_friction=True, 
-
-            friction_combine_mode="average",   
-            restitution_combine_mode="min",          
-
-            compliant_contact_stiffness=500.0,        
-            compliant_contact_damping=5.0             
-        )
-    elif args_cli.tested_terrain == "flat":
-        env_cfg.scene.terrain.terrain_type = "plane"
-        env_cfg.scene.terrain.terrain_generator = None
-    else:
-        env_cfg.scene.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
-            friction_combine_mode = "multiply",
-            restitution_combine_mode = "multiply",
-            static_friction = 1.0,
-            dynamic_friction = 1.0,
-        )
-
     if args_cli.keyboard:
-        env_cfg.scene.num_envs = 1
         env_cfg.terminations.time_out = None
         env_cfg.commands.base_velocity.debug_vis = False
         controller = Se2Keyboard(
@@ -175,6 +112,8 @@ def main():
         env_cfg.observations.policy.velocity_commands = ObsTerm(
             func=lambda env: torch.tensor(controller.advance(), dtype=torch.float32).unsqueeze(0).to(env.device),
         )
+
+    apply_overrides_play(env_cfg, args_cli)
 
     agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
 
@@ -247,9 +186,7 @@ def main():
     obs, _ = env.get_observations()
 
     # Evalaluation configuration
-    trials = 5 
-    trial_steps = 900
-    warmup_steps = 50
+    trials, trial_steps, warmup_steps = 5, 900, 50
     results = []
     buffer = []
 
@@ -260,10 +197,9 @@ def main():
     combinations = list(product(v_x_vals, omega_z_vals))
     chunks = np.array_split(combinations, args_cli.num_envs)
     env_command_queues = {i: list(chunk) for i, chunk in enumerate(chunks)}
+    max_steps = max(len(queue) for queue in env_command_queues.values())
 
     total_start_time = time.time()
-
-    max_steps = max(len(queue) for queue in env_command_queues.values())
 
     for step_index in range(max_steps):
         commands = []
@@ -273,11 +209,8 @@ def main():
             else:
                 v_x_cmd, omega_z_cmd = 0.0, 0.0
 
-            if args_cli.unique:
-                commands.append([3.0, 0.0, 0.0])
-            else:
-                commands.append([v_x_cmd, 0.0, omega_z_cmd])
-
+            if args_cli.unique: commands.append([3.0, 0.0, 0.0])
+            else: commands.append([v_x_cmd, 0.0, omega_z_cmd])
 
         command_tensor = torch.tensor(commands, device=env.device)
 

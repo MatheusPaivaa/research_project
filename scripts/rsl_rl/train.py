@@ -96,7 +96,7 @@ torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
 import CFLAnymalC.tasks  # noqa: F401
-from CFLAnymalC.tasks.manager_based.cflanymalc.mdp.terrain import get_terrain_cfg
+from terrain_utils import apply_overrides_train
 
 @hydra_task_config(args_cli.task, "rsl_rl_cfg_entry_point")
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: RslRlOnPolicyRunnerCfg):
@@ -106,60 +106,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     
     env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
     
-    if args_cli.terrain is not None and args_cli.terrain != "sand" and args_cli.terrain != "stepping_ice":
-        env_cfg.scene.terrain.terrain_generator = get_terrain_cfg(
-            selected_terrain=args_cli.terrain,
-            num_rows=10,
-            num_cols=20,
-        )
-
-    if args_cli.terrain == "flat_oil":
-        env_cfg.scene.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
-            friction_combine_mode="multiply",
-            restitution_combine_mode="multiply",
-            static_friction=0.2,
-            dynamic_friction=0.15,
-        )
-    elif args_cli.terrain == "flat":
-        env_cfg.scene.terrain.terrain_type = "plane"
-        env_cfg.scene.terrain.terrain_generator = None
-    elif args_cli.terrain == "stepping_ice":
-
-        env_cfg.scene.terrain.terrain_generator = get_terrain_cfg(
-            selected_terrain="boxes",
-            num_rows=10,
-            num_cols=20,
-        )
-        env_cfg.scene.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
-            friction_combine_mode="multiply",
-            restitution_combine_mode="multiply",
-            static_friction=0.2,
-            dynamic_friction=0.15,
-        )
-    elif args_cli.terrain == "sand":
-        env_cfg.scene.terrain.terrain_type = "plane"
-        env_cfg.scene.terrain.terrain_generator = None
-        env_cfg.scene.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
-            static_friction=1.2,
-            dynamic_friction=0.9, 
-            restitution=0.3,  
-
-            improve_patch_friction=True, 
-
-            friction_combine_mode="average",   
-            restitution_combine_mode="min",          
-
-            compliant_contact_stiffness=600.0,        
-            compliant_contact_damping=5.0             
-        )
-    else:
-        env_cfg.scene.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
-            friction_combine_mode="multiply",
-            restitution_combine_mode="multiply",
-            static_friction=1,
-            dynamic_friction=1,
-        )
-        
+    apply_overrides_train(env_cfg, args_cli)
+ 
     agent_cfg.max_iterations = (
         args_cli.max_iterations if args_cli.max_iterations is not None else agent_cfg.max_iterations
     )
