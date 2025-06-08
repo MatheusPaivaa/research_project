@@ -9,7 +9,7 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab_assets.robots.anymal import ANYMAL_C_CFG
 
-from terrain_generator_cfg import get_terrain_cfg
+from CFLAnymalC.tasks.manager_based.cflanymalc.mdp.terrain import get_terrain_cfg
 
 @configclass
 class MySceneCfg(InteractiveSceneCfg):
@@ -30,10 +30,12 @@ class MySceneCfg(InteractiveSceneCfg):
         ),
         debug_vis=False,
     )
+
     # robots
     robot: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
     contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True)
+    
     # lights
     sky_light = AssetBaseCfg(
         prim_path="/World/skyLight",

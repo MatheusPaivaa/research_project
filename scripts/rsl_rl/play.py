@@ -29,6 +29,7 @@ parser.add_argument("--num_envs", type=int, default=None, help="Number of enviro
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--trained_terrain", type=str, default="flat", help="Name of the trained terrain.")
 parser.add_argument("--tested_terrain", type=str, default="flat", help="Name of the tested terrain.")
+parser.add_argument("--log_name", type=str, default=None, help="Name of the log name.")
 parser.add_argument(
     "--use_pretrained_checkpoint",
     action="store_true",
@@ -73,8 +74,8 @@ from isaaclab_tasks.utils import get_checkpoint_path, parse_env_cfg
 
 # PLACEHOLDER: Extension template (do not remove this comment)
 
-from terrain_generator_cfg import get_terrain_cfg
-from command_fixed import FixedVelocityCommandCfg
+from CFLAnymalC.tasks.manager_based.cflanymalc.mdp.terrain import get_terrain_cfg
+from CFLAnymalC.tasks.manager_based.cflanymalc.mdp.command import FixedVelocityCommandCfg
 
 import CFLAnymalC.tasks
 
@@ -94,20 +95,21 @@ def main():
         default_command=[0.0, 0.0, 0.0]
     )
 
-    if args_cli.unique:
-        env_cfg.scene.terrain.terrain_generator = get_terrain_cfg(
-            selected_terrain = args_cli.tested_terrain,
-            num_rows = 1,
-            num_cols = 1,
-            eval = True,
-        )
-    else:
-        env_cfg.scene.terrain.terrain_generator = get_terrain_cfg(
-            selected_terrain = args_cli.tested_terrain,
-            num_rows = 10,
-            num_cols = 20,
-            eval = True,
-        )
+    if args_cli.tested_terrain != "sand" and args_cli.tested_terrain != "stepping_ice":
+        if args_cli.unique:
+            env_cfg.scene.terrain.terrain_generator = get_terrain_cfg(
+                selected_terrain = args_cli.tested_terrain,
+                num_rows = 1,
+                num_cols = 1,
+                eval = True,
+            )
+        else:
+            env_cfg.scene.terrain.terrain_generator = get_terrain_cfg(
+                selected_terrain = args_cli.tested_terrain,
+                num_rows = 10,
+                num_cols = 20,
+                eval = True,
+            )
 
     if args_cli.tested_terrain == "flat_oil":
         env_cfg.scene.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
@@ -116,6 +118,37 @@ def main():
             static_friction = 0.15,
             dynamic_friction = 0.10,
         )
+    elif args_cli.tested_terrain == "stepping_ice":
+        env_cfg.scene.terrain.terrain_generator = get_terrain_cfg(
+            selected_terrain="boxes",
+            num_rows=1,
+            num_cols=1,
+        )
+        env_cfg.scene.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
+            friction_combine_mode="multiply",
+            restitution_combine_mode="multiply",
+            static_friction=0.2,
+            dynamic_friction=0.15,
+        )
+    elif args_cli.tested_terrain == "sand":
+        env_cfg.scene.terrain.terrain_type = "plane"
+        env_cfg.scene.terrain.terrain_generator = None
+        env_cfg.scene.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
+            static_friction=1.2,
+            dynamic_friction=0.9, 
+            restitution=0.0,  
+
+            improve_patch_friction=True, 
+
+            friction_combine_mode="average",   
+            restitution_combine_mode="min",          
+
+            compliant_contact_stiffness=500.0,        
+            compliant_contact_damping=5.0             
+        )
+    elif args_cli.tested_terrain == "flat":
+        env_cfg.scene.terrain.terrain_type = "plane"
+        env_cfg.scene.terrain.terrain_generator = None
     else:
         env_cfg.scene.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode = "multiply",
@@ -195,15 +228,15 @@ def main():
     obs, _ = env.get_observations()
 
     # Evalaluation configuration
-    trials = 3 
-    trial_steps = 300
+    trials = 5 
+    trial_steps = 900
     warmup_steps = 50
     results = []
     buffer = []
 
     # Evaluation for each pair
-    v_x_vals = np.linspace(-3, 3, 30)  # Velocities from -3 to 3 m/s (30 points)
-    omega_z_vals = np.linspace(-3, 3, 30)  # Yaw rates from -3 to 3 rad/s (30 points)
+    v_x_vals = np.linspace(-4, 4, 30)  # Antes
+    omega_z_vals = np.linspace(-4, 4, 30)  # Antes
 
     combinations = list(product(v_x_vals, omega_z_vals))
     chunks = np.array_split(combinations, args_cli.num_envs)
@@ -211,16 +244,24 @@ def main():
 
     total_start_time = time.time()
 
-    for step_index in range(len(env_command_queues[0])):
+    # Calcula o número máximo de passos entre todos os ambientes
+    max_steps = max(len(queue) for queue in env_command_queues.values())
+
+    for step_index in range(max_steps):
         commands = []
         for i in range(args_cli.num_envs):
-
-            v_x_cmd, omega_z_cmd = env_command_queues[i][step_index]
+            # Verifica se ainda há comandos para este ambiente
+            if step_index < len(env_command_queues[i]):
+                v_x_cmd, omega_z_cmd = env_command_queues[i][step_index]
+            else:
+                # Se não houver mais comandos, envia comando neutro (ex: parado)
+                v_x_cmd, omega_z_cmd = 0.0, 0.0
 
             if args_cli.unique:
-                commands.append([1.0, 0.0, 1.0])
+                commands.append([1.0, 0.0, 0.0])
             else:
                 commands.append([v_x_cmd, 0.0, omega_z_cmd])
+
 
         command_tensor = torch.tensor(commands, device=env.device)
 
@@ -238,13 +279,12 @@ def main():
             while timestep < trial_steps and simulation_app.is_running():
                 start_time = time.time()
                 with torch.inference_mode():
-
                     if trial == 0 and timestep == 0: env.reset()
 
                     command_term = env.env.unwrapped.command_manager.get_term("base_velocity")
                     command_term.update_commands(command_tensor)
 
-                    actions = policy(obs.float())
+                    actions = policy(obs.double())
                     obs, _, _, _ = env.step(actions)
 
                     for i in range(args_cli.num_envs):
@@ -261,8 +301,8 @@ def main():
                         if timestep >= warmup_steps:
                             buffer.append({
                                 "env": i,
-                                "v_x_cmd": target_v_x,
-                                "omega_z_cmd": target_omega_z,
+                                "v_x_cmd": v_x,
+                                "omega_z_cmd": omega_z,
                                 "error_x": error_x,
                                 "error_omega_z": error_omega_z,
                             })
@@ -297,6 +337,11 @@ def main():
             count              = data["count"]
             avg_error_x        = data["sum_error_x"]        / count
             avg_error_omega_z  = data["sum_error_omega_z"]  / count
+            mse_x              = data["sum_error_x"] / count
+            mse_omega_z        = data["sum_error_omega_z"] / count
+
+            rmse_x             = mse_x ** 0.5
+            rmse_omega_z       = mse_omega_z ** 0.5
 
             v_x_cmd, _, omega_z_cmd = commands[env_id]   
 
@@ -311,12 +356,18 @@ def main():
                 "omega_z_cmd": omega_z_cmd,
                 "avg_error_x": avg_error_x,
                 "avg_error_omega_z": avg_error_omega_z,
+                "rmse_x": rmse_x,
+                "rmse_omega_z": rmse_omega_z,
                 "count": count
             })
 
     results.sort(key=lambda x: (x["v_x_cmd"], x["omega_z_cmd"]))
 
     os.makedirs("./logs/tracking_log", exist_ok=True)
+
+    if args_cli.log_name is not None:
+        args_cli.tested_terrain = args_cli.log_name
+        
     output_path = os.path.join(f"./logs/tracking_log/average_error_log_{args_cli.trained_terrain}_in_{args_cli.tested_terrain}.json")
     with open(output_path, "w") as f:
         json.dump(results, f, indent=4)

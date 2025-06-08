@@ -44,13 +44,20 @@ fig, ax = plt.subplots(figsize=(6, 6))
 im = ax.imshow(grids[0], cmap='Blues', origin='lower',
                extent=[-max_range, max_range, -max_range, max_range],
                vmin=0, vmax=1)
-title = ax.set_title(f"Step {steps[0]}")
+
+ax.set_xticks(np.linspace(-max_range, max_range, num_bins), minor=True)
+ax.set_yticks(np.linspace(-max_range, max_range, num_bins), minor=True)
+ax.grid(which='minor', color='gray', linestyle=':', linewidth=0.5)
+
+filled_inicial = int(np.sum(grids[0]))
+title = ax.set_title(f"Step {steps[0]} - {filled_inicial} bins filled")
 plt.xlabel("lin_vel_x")
 plt.ylabel("ang_vel_z")
 
 def update(i):
     im.set_data(grids[i])
-    title.set_text(f"Unlocked Bins - Step {steps[i]}")
+    filled = int(np.sum(grids[i]))
+    title.set_text(f"Step {steps[i]} - {filled} bins filled")
     return [im, title]
 
 ani = animation.FuncAnimation(
@@ -64,3 +71,9 @@ try:
     print(f"MP4 {mp4_path}")
 except Exception as e:
     print(f"Error MP4: {e}")
+
+final_grid = grids[-1]
+total_bins = final_grid.size
+filled = int(np.sum(final_grid))
+blank_spaces = total_bins - filled
+print(f"Blank spaces: {blank_spaces}")

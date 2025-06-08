@@ -5,47 +5,56 @@ from isaaclab.managers import EventTermCfg as EventTerm
 
 @configclass
 class EventCfg:
-    """Configuration for events."""
+    """Configuration for environmental and robot-related events in the simulation."""
 
-    # startup
+    # Events triggered once at environment startup (before any resets)
+
+    # Randomizes the physical material properties (friction, restitution) of the robot's bodies
     physics_material = EventTerm(
-        func=mdp.randomize_rigid_body_material,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.8, 0.8),
-            "dynamic_friction_range": (0.6, 0.6),
-            "restitution_range": (0.0, 0.0),
-            "num_buckets": 64,
-        },
+        func=mdp.randomize_rigid_body_material, mode="startup",
+        params=dict(
+            asset_cfg=SceneEntityCfg("robot", body_names=".*"),
+            static_friction_range=(0.4, 1.5),     
+            dynamic_friction_range=(0.3, 1.3),
+            restitution_range=(0.0, 0.0),
+            num_buckets=64,
+        ),
     )
 
+    # Adds or subtracts mass from the robot's base to simulate mass uncertainty
     add_base_mass = EventTerm(
         func=mdp.randomize_rigid_body_mass,
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="base"),
-            "mass_distribution_params": (-5.0, 5.0),
-            "operation": "add",
+            "mass_distribution_params": (-5.0, 5.0),  # +/- 5kg variation
+            "operation": "add",  # adds to original mass
         },
     )
 
-    # reset
+    # Events triggered at every environment reset
+
+    # Applies external forces/torques to the base during reset (can simulate pushes or perturbations)
     base_external_force_torque = EventTerm(
         func=mdp.apply_external_force_torque,
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="base"),
-            "force_range": (0.0, 0.0),
-            "torque_range": (-0.0, 0.0),
+            "force_range": (0.0, 150.0),   
+            "torque_range": (-50.0, 50.0),
         },
     )
 
+    # Resets the robot base (position, orientation, velocity) within a random uniform range
     reset_base = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
+            "pose_range": {
+                "x": (-0.5, 0.5),
+                "y": (-0.5, 0.5),
+                "yaw": (-3.14, 3.14),  # full rotation allowed
+            },
             "velocity_range": {
                 "x": (-0.5, 0.5),
                 "y": (-0.5, 0.5),
@@ -57,19 +66,27 @@ class EventCfg:
         },
     )
 
+    # Randomly scales the initial joint positions and resets joint velocities to zero
     reset_robot_joints = EventTerm(
         func=mdp.reset_joints_by_scale,
         mode="reset",
         params={
-            "position_range": (0.5, 1.5),
-            "velocity_range": (0.0, 0.0),
+            "position_range": (0.5, 1.5),  # scales joint positions (e.g., 50% to 150%)
+            "velocity_range": (0.0, 0.0),  # joints start with zero velocity
         },
     )
 
-    # # interval
-    # push_robot = EventTerm(
-    #     func=mdp.push_by_setting_velocity,
-    #     mode="interval",
-    #     interval_range_s=(10.0, 15.0),
-    #     params={"velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)}},
-    # )
+    # Events triggered periodically during simulation (in between steps)
+
+    # Pushes the robot by directly setting linear velocity within a random range
+    push_robot = EventTerm(
+        func=mdp.push_by_setting_velocity,
+        mode="interval",  # triggered at random intervals
+        interval_range_s=(10.0, 15.0),  # push every 10–15 seconds
+        params={
+            "velocity_range": {
+                "x": (-0.5, 0.5),
+                "y": (-0.5, 0.5),
+            },
+        },
+    )

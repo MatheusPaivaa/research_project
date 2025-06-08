@@ -5,10 +5,40 @@ from isaaclab.managers import SceneEntityCfg
 
 @configclass
 class TerminationsCfg:
-    """Termination terms for the MDP."""
+    """Termination conditions for the MDP."""
 
+    # Terminate when the episode exceeds the maximum allowed time steps
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
+
+    # Terminate if the robot's base comes into contact with the ground (illegal contact)
     base_contact = DoneTerm(
         func=mdp.illegal_contact,
-        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="base"), "threshold": 1.0},
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names="base"),
+            "threshold": 1.0,
+        },
     )
+
+    # # Terminate if the robot's base orientation exceeds a tilt threshold (roll or pitch)
+    large_body_tilt = DoneTerm(
+        func=mdp.bad_orientation,
+        params={
+            "limit_angle": 0.5,
+            "asset_cfg": SceneEntityCfg("robot"),
+        },
+    )
+
+    # # # Terminate if the applied joint effort (torque) hits the actuator's soft limits
+    # joint_effort_limit = DoneTerm(                         # torque > 105 %
+    #     func=mdp.joint_effort_out_of_limit,
+    #     params=dict(asset_cfg=SceneEntityCfg("robot"),
+    #                 safety_factor=1.05),
+    # )
+
+    # # Terminate if joint velocities exceed the soft joint velocity limits
+
+    # joint_vel_limit = DoneTerm(                            # vel. > 110 %
+    #     func=mdp.joint_vel_out_of_limit,
+    #     params=dict(asset_cfg=SceneEntityCfg("robot"),
+    #                 safety_factor=1.10),
+    # )

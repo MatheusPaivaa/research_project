@@ -5,9 +5,11 @@
 
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.utils import configclass
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.managers import EventTermCfg as EventTerm
 from . import mdp
 
-from terrain_generator_cfg import get_terrain_cfg
+from CFLAnymalC.tasks.manager_based.cflanymalc.mdp.terrain import get_terrain_cfg
 
 @configclass
 class AnymalCDefaultEnvCfg(ManagerBasedRLEnvCfg):
@@ -27,7 +29,6 @@ class AnymalCDefaultEnvCfg(ManagerBasedRLEnvCfg):
     curriculum: mdp.CurriculumCfg = mdp.CurriculumCfg()
 
     def __post_init__(self):
-        """Post initialization."""
         # general settings
         self.decimation = 4
         self.episode_length_s = 20.0
@@ -62,26 +63,59 @@ class AnymalCFlatEnvCfg(AnymalCDefaultEnvCfg):
 class AnymalCRoughEnvCfg(AnymalCDefaultEnvCfg):
 
     def __post_init__(self):
-
         super().__post_init__()
 
 
 @configclass
-class AnymalCPlayEnvCfg(AnymalCFlatEnvCfg):
-    """Configuration for the locomotion velocity-tracking environment."""
-
+class AnymalCPlayFlatEnvCfg(AnymalCFlatEnvCfg):
     curriculum: None = None
 
     def __post_init__(self):
-        # post init of parent
         super().__post_init__()
 
-        # disable randomization for play
         self.observations.policy.enable_corruption = False
 
-        # remove random pushing event
+        self.scene.terrain.max_init_terrain_level = None
+
         self.events.base_external_force_torque = None
         self.events.push_robot = None
+        self.events.physics_material = EventTerm(
+            func=mdp.randomize_rigid_body_material, mode="startup",
+            params=dict(
+                asset_cfg=SceneEntityCfg("robot", body_names=".*"),
+                static_friction_range=(0.8, 0.8),     
+                dynamic_friction_range=(0.6, 0.6),
+                restitution_range=(0.0, 0.0),
+                num_buckets=64,
+            ),
+        )
+        
+        self.scene.terrain.terrain_type = "generator"
 
     
+@configclass
+class AnymalCPlayRoughEnvCfg(AnymalCRoughEnvCfg):
+    curriculum: None = None
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        self.scene.env_spacing = 2.5
+
+        self.scene.terrain.max_init_terrain_level = None
+
+        self.observations.policy.enable_corruption = False
+
+        self.events.base_external_force_torque = None
+        self.events.push_robot = None
+        self.events.physics_material = EventTerm(
+            func=mdp.randomize_rigid_body_material, mode="startup",
+            params=dict(
+                asset_cfg=SceneEntityCfg("robot", body_names=".*"),
+                static_friction_range=(0.8, 0.8),     
+                dynamic_friction_range=(0.6, 0.6),
+                restitution_range=(0.0, 0.0),
+                num_buckets=64,
+            ),
+        )
 

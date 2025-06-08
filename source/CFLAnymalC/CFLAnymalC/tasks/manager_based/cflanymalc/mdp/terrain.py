@@ -7,7 +7,7 @@ import numpy as np
 MeshPlaneTerrainCfg = terrain_gen.MeshPlaneTerrainCfg
 
 def get_terrain_cfg(
-    selected_terrain: str = "boxes",
+    selected_terrain: str = "flat",
     eval: bool = False, 
     num_rows: int = 4, 
     num_cols: int = 4, 
@@ -37,18 +37,18 @@ def get_terrain_cfg(
 
     extra_terrains = {
         "pyramid": terrain_gen.MeshPyramidStairsTerrainCfg(
-            proportion=0.2,
+            proportion=1,
             step_height_range=(0.05, 0.23),
             step_width=0.3,
-            platform_width=1.0,
+            platform_width=3.0,
             border_width=1.0,
             holes=False,
         ),
         "pyramid_inv": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(
-            proportion=0.2,
+            proportion=1,
             step_height_range=(0.05, 0.23),
             step_width=0.3,
-            platform_width=1.0,
+            platform_width=3.0,
             border_width=1.0,
             holes=False,
         )
