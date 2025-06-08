@@ -9,15 +9,15 @@ class EventCfg:
 
     # Events triggered once at environment startup (before any resets)
 
-    # Randomizes the physical material properties (friction, restitution) of the robot's bodies
+    # Randomizes the physical material properties (friction, restitution) of the robot's foot
     physics_material = EventTerm(
         func=mdp.randomize_rigid_body_material, mode="startup",
         params=dict(
-            asset_cfg=SceneEntityCfg("robot", body_names=".*"),
+            asset_cfg=SceneEntityCfg("robot", body_names=".*FOOT"),
             static_friction_range=(0.4, 1.5),     
             dynamic_friction_range=(0.3, 1.3),
-            restitution_range=(0.0, 0.0),
-            num_buckets=64,
+            restitution_range=(0.0, 0.5),
+            num_buckets=32,
         ),
     )
 
@@ -28,7 +28,7 @@ class EventCfg:
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="base"),
             "mass_distribution_params": (-5.0, 5.0),  # +/- 5kg variation
-            "operation": "add",  # adds to original mass
+            "operation": "add", 
         },
     )
 
@@ -40,8 +40,8 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="base"),
-            "force_range": (0.0, 150.0),   
-            "torque_range": (-50.0, 50.0),
+            "force_range": (-50.0, 50.0),   
+            "torque_range": (20.0, 20.0),
         },
     )
 

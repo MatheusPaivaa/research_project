@@ -19,7 +19,7 @@ class TerminationsCfg:
         },
     )
 
-    # # Terminate if the robot's base orientation exceeds a tilt threshold (roll or pitch)
+    # Terminate if the robot's base orientation exceeds a tilt threshold (roll or pitch)
     large_body_tilt = DoneTerm(
         func=mdp.bad_orientation,
         params={
@@ -28,17 +28,25 @@ class TerminationsCfg:
         },
     )
 
-    # # # Terminate if the applied joint effort (torque) hits the actuator's soft limits
-    # joint_effort_limit = DoneTerm(                         # torque > 105 %
+    # Terminate if the robot is out of terrain's bounds
+    terrain_out_of_bounds = DoneTerm(
+        func=mdp.terrain_out_of_bounds,
+        params={"asset_cfg": SceneEntityCfg("robot"), "distance_buffer": 3.0},
+        time_out=True,
+    )
+
+    # Terminate if the applied joint effort (torque) hits the actuator's soft limits
+    # joint_effort_limit = DoneTerm(
     #     func=mdp.joint_effort_out_of_limit,
-    #     params=dict(asset_cfg=SceneEntityCfg("robot"),
-    #                 safety_factor=1.05),
+    #     params=dict(
+    #         asset_cfg=SceneEntityCfg("robot")
+    #     ),
     # )
 
-    # # Terminate if joint velocities exceed the soft joint velocity limits
-
-    # joint_vel_limit = DoneTerm(                            # vel. > 110 %
+    # Terminate if joint velocities exceed the soft joint velocity limits
+    # joint_vel_limit = DoneTerm(
     #     func=mdp.joint_vel_out_of_limit,
-    #     params=dict(asset_cfg=SceneEntityCfg("robot"),
-    #                 safety_factor=1.10),
+    #     params=dict(
+    #         asset_cfg=SceneEntityCfg("robot")
+    #     ),
     # )

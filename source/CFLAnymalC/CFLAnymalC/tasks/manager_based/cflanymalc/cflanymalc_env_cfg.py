@@ -105,6 +105,7 @@ class AnymalCPlayRoughEnvCfg(AnymalCRoughEnvCfg):
         self.scene.terrain.max_init_terrain_level = None
 
         self.observations.policy.enable_corruption = False
+        self.terminations.terrain_out_of_bounds = None
 
         self.events.base_external_force_torque = None
         self.events.push_robot = None

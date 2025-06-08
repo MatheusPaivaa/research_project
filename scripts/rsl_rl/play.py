@@ -30,6 +30,8 @@ parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--trained_terrain", type=str, default="flat", help="Name of the trained terrain.")
 parser.add_argument("--tested_terrain", type=str, default="flat", help="Name of the tested terrain.")
 parser.add_argument("--log_name", type=str, default=None, help="Name of the log name.")
+parser.add_argument("--keyboard", action="store_true", default=False, help="Whether to use keyboard.")
+parser.add_argument("--real_time", action="store_true", default=False, help="Run in real-time, if possible.")
 parser.add_argument(
     "--use_pretrained_checkpoint",
     action="store_true",
@@ -71,18 +73,21 @@ from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlVecEnvWrapper, expor
 
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils import get_checkpoint_path, parse_env_cfg
+from isaaclab.devices import Se2Keyboard
+from isaaclab.managers import ObservationTermCfg as ObsTerm
 
 # PLACEHOLDER: Extension template (do not remove this comment)
 
 from CFLAnymalC.tasks.manager_based.cflanymalc.mdp.terrain import get_terrain_cfg
 from CFLAnymalC.tasks.manager_based.cflanymalc.mdp.command import FixedVelocityCommandCfg
+import rsl_rl_utils
 
 import CFLAnymalC.tasks
 
 def main():
     """Play with RSL-RL agent."""
 
-    if args_cli.unique: 
+    if args_cli.unique or args_cli.keyboard: 
         args_cli.num_envs = 1
 
     # parse configuration
@@ -90,13 +95,14 @@ def main():
         args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
     )
 
-    env_cfg.commands.base_velocity = FixedVelocityCommandCfg(
-        asset_name="robot",
-        default_command=[0.0, 0.0, 0.0]
-    )
+    if not args_cli.keyboard:
+        env_cfg.commands.base_velocity = FixedVelocityCommandCfg(
+            asset_name="robot",
+            default_command=[0.0, 0.0, 0.0]
+        )
 
     if args_cli.tested_terrain != "sand" and args_cli.tested_terrain != "stepping_ice":
-        if args_cli.unique:
+        if args_cli.unique or args_cli.keyboard:
             env_cfg.scene.terrain.terrain_generator = get_terrain_cfg(
                 selected_terrain = args_cli.tested_terrain,
                 num_rows = 1,
@@ -155,6 +161,19 @@ def main():
             restitution_combine_mode = "multiply",
             static_friction = 1.0,
             dynamic_friction = 1.0,
+        )
+
+    if args_cli.keyboard:
+        env_cfg.scene.num_envs = 1
+        env_cfg.terminations.time_out = None
+        env_cfg.commands.base_velocity.debug_vis = False
+        controller = Se2Keyboard(
+            v_x_sensitivity=env_cfg.commands.base_velocity.ranges.lin_vel_x[1],
+            v_y_sensitivity=env_cfg.commands.base_velocity.ranges.lin_vel_y[1],
+            omega_z_sensitivity=env_cfg.commands.base_velocity.ranges.ang_vel_z[1],
+        )
+        env_cfg.observations.policy.velocity_commands = ObsTerm(
+            func=lambda env: torch.tensor(controller.advance(), dtype=torch.float32).unsqueeze(0).to(env.device),
         )
 
     agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
@@ -244,21 +263,18 @@ def main():
 
     total_start_time = time.time()
 
-    # Calcula o número máximo de passos entre todos os ambientes
     max_steps = max(len(queue) for queue in env_command_queues.values())
 
     for step_index in range(max_steps):
         commands = []
         for i in range(args_cli.num_envs):
-            # Verifica se ainda há comandos para este ambiente
             if step_index < len(env_command_queues[i]):
                 v_x_cmd, omega_z_cmd = env_command_queues[i][step_index]
             else:
-                # Se não houver mais comandos, envia comando neutro (ex: parado)
                 v_x_cmd, omega_z_cmd = 0.0, 0.0
 
             if args_cli.unique:
-                commands.append([1.0, 0.0, 0.0])
+                commands.append([3.0, 0.0, 0.0])
             else:
                 commands.append([v_x_cmd, 0.0, omega_z_cmd])
 
@@ -281,10 +297,11 @@ def main():
                 with torch.inference_mode():
                     if trial == 0 and timestep == 0: env.reset()
 
-                    command_term = env.env.unwrapped.command_manager.get_term("base_velocity")
-                    command_term.update_commands(command_tensor)
+                    if not args_cli.keyboard:
+                        command_term = env.env.unwrapped.command_manager.get_term("base_velocity")
+                        command_term.update_commands(command_tensor)
 
-                    actions = policy(obs.double())
+                    actions = policy(obs.float())
                     obs, _, _, _ = env.step(actions)
 
                     for i in range(args_cli.num_envs):
@@ -315,6 +332,11 @@ def main():
                     sleep_time = dt - (time.time() - start_time)
                     if args_cli.real_time and sleep_time > 0:
                         time.sleep(sleep_time)
+
+                    if args_cli.keyboard:
+                        rsl_rl_utils.camera_follow(env)
+                        current_cmd = controller.advance()
+                        print(f"[DEBUG] Teclado: v_x={current_cmd[0]:.2f}, omega_z={current_cmd[2]:.2f}")
 
             results_per_env = collections.defaultdict(lambda: {
                 "sum_error_x": 0.0,
