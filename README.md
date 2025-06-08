@@ -1,1 +1,1 @@
-# research_project
+# Adaptive Locomotion via Federated Learning and Environment Clustering

@@ -10,6 +10,7 @@
 import argparse
 import collections
 from itertools import product
+import math
 
 from isaaclab.app import AppLauncher
 
@@ -28,6 +29,9 @@ parser.add_argument("--num_envs", type=int, default=None, help="Number of enviro
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--trained_terrain", type=str, default="flat", help="Name of the trained terrain.")
 parser.add_argument("--tested_terrain", type=str, default="flat", help="Name of the tested terrain.")
+parser.add_argument("--log_name", type=str, default=None, help="Name of the log name.")
+parser.add_argument("--keyboard", action="store_true", default=False, help="Whether to use keyboard.")
+parser.add_argument("--real_time", action="store_true", default=False, help="Run in real-time, if possible.")
 parser.add_argument(
     "--use_pretrained_checkpoint",
     action="store_true",
@@ -69,17 +73,21 @@ from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlVecEnvWrapper, expor
 
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils import get_checkpoint_path, parse_env_cfg
+from isaaclab.devices import Se2Keyboard
+from isaaclab.managers import ObservationTermCfg as ObsTerm
 
 # PLACEHOLDER: Extension template (do not remove this comment)
 
-from terrain_generator_cfg import get_terrain_cfg
+from CFLAnymalC.tasks.manager_based.cflanymalc.mdp.command import FixedVelocityCommandCfg
+import rsl_rl_utils
 
-import CFL_AnymalC.tasks
+import CFLAnymalC.tasks
+from terrain_utils import apply_overrides_play
 
 def main():
     """Play with RSL-RL agent."""
 
-    if args_cli.unique: 
+    if args_cli.unique or args_cli.keyboard: 
         args_cli.num_envs = 1
 
     # parse configuration
@@ -87,35 +95,25 @@ def main():
         args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
     )
 
-    if args_cli.unique:
-        env_cfg.terrain.terrain_generator = get_terrain_cfg(
-            selected_terrain = args_cli.tested_terrain,
-            num_rows = 1,
-            num_cols = 1,
-            eval = True,
-        )
-    else:
-        env_cfg.terrain.terrain_generator = get_terrain_cfg(
-            selected_terrain = args_cli.tested_terrain,
-            num_rows = 10,
-            num_cols = 20,
-            eval = True,
+    if not args_cli.keyboard:
+        env_cfg.commands.base_velocity = FixedVelocityCommandCfg(
+            asset_name="robot",
+            default_command=[0.0, 0.0, 0.0]
         )
 
-    if args_cli.tested_terrain == "flat_oil":
-        env_cfg.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
-            friction_combine_mode = "multiply",
-            restitution_combine_mode = "multiply",
-            static_friction = 0.15,
-            dynamic_friction = 0.10,
+    if args_cli.keyboard:
+        env_cfg.terminations.time_out = None
+        env_cfg.commands.base_velocity.debug_vis = False
+        controller = Se2Keyboard(
+            v_x_sensitivity=env_cfg.commands.base_velocity.ranges.lin_vel_x[1],
+            v_y_sensitivity=env_cfg.commands.base_velocity.ranges.lin_vel_y[1],
+            omega_z_sensitivity=env_cfg.commands.base_velocity.ranges.ang_vel_z[1],
         )
-    else:
-        env_cfg.terrain.physics_material = sim_utils.RigidBodyMaterialCfg(
-            friction_combine_mode = "multiply",
-            restitution_combine_mode = "multiply",
-            static_friction = 1.0,
-            dynamic_friction = 1.0,
+        env_cfg.observations.policy.velocity_commands = ObsTerm(
+            func=lambda env: torch.tensor(controller.advance(), dtype=torch.float32).unsqueeze(0).to(env.device),
         )
+
+    apply_overrides_play(env_cfg, args_cli)
 
     agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
 
@@ -141,6 +139,9 @@ def main():
     # convert to single-agent instance if required by the RL algorithm
     if isinstance(env.unwrapped, DirectMARLEnv):
         env = multi_agent_to_single_agent(env)
+
+    if not hasattr(env.unwrapped, "_commands"):
+        env.unwrapped._commands = torch.zeros((args_cli.num_envs, 3), device=args_cli.device)
 
     # wrap for video recording
     if args_cli.video:
@@ -182,36 +183,34 @@ def main():
     )
 
     dt = env.unwrapped.step_dt
-
     obs, _ = env.get_observations()
 
     # Evalaluation configuration
-    trials = 3 
-    trial_steps = 300
-    warmup_steps = 50
+    trials, trial_steps, warmup_steps = 5, 900, 50
     results = []
     buffer = []
 
     # Evaluation for each pair
-    v_x_vals = np.linspace(-3, 3, 30)  # Velocities from -3 to 3 m/s (30 points)
-    omega_z_vals = np.linspace(-3, 3, 30)  # Yaw rates from -3 to 3 rad/s (30 points)
+    v_x_vals = np.linspace(-4, 4, 30)  # Antes
+    omega_z_vals = np.linspace(-4, 4, 30)  # Antes
 
     combinations = list(product(v_x_vals, omega_z_vals))
     chunks = np.array_split(combinations, args_cli.num_envs)
     env_command_queues = {i: list(chunk) for i, chunk in enumerate(chunks)}
+    max_steps = max(len(queue) for queue in env_command_queues.values())
 
     total_start_time = time.time()
 
-    for step_index in range(len(env_command_queues[0])):
+    for step_index in range(max_steps):
         commands = []
         for i in range(args_cli.num_envs):
-
-            v_x_cmd, omega_z_cmd = env_command_queues[i][step_index]
-
-            if args_cli.unique:
-                commands.append([1.0, 0.0, 1.0])
+            if step_index < len(env_command_queues[i]):
+                v_x_cmd, omega_z_cmd = env_command_queues[i][step_index]
             else:
-                commands.append([v_x_cmd, 0.0, omega_z_cmd])
+                v_x_cmd, omega_z_cmd = 0.0, 0.0
+
+            if args_cli.unique: commands.append([3.0, 0.0, 0.0])
+            else: commands.append([v_x_cmd, 0.0, omega_z_cmd])
 
         command_tensor = torch.tensor(commands, device=env.device)
 
@@ -229,23 +228,31 @@ def main():
             while timestep < trial_steps and simulation_app.is_running():
                 start_time = time.time()
                 with torch.inference_mode():
-                    env.unwrapped._commands[:] = command_tensor
+                    if trial == 0 and timestep == 0: env.reset()
 
-                    actions = policy(obs)
+                    if not args_cli.keyboard:
+                        command_term = env.env.unwrapped.command_manager.get_term("base_velocity")
+                        command_term.update_commands(command_tensor)
+
+                    actions = policy(obs.float())
                     obs, _, _, _ = env.step(actions)
-                    
+
                     for i in range(args_cli.num_envs):
+
                         v_x = obs[i, 0].item()
                         omega_z = obs[i, 5].item()
+
                         target_v_x = obs[i, 9].item()
                         target_omega_z = obs[i, 11].item()
-                        error_x = abs(v_x - target_v_x)
-                        error_omega_z = abs(omega_z - target_omega_z)
+
+                        error_x = (v_x - target_v_x) ** 2
+                        error_omega_z = (omega_z - target_omega_z) ** 2
+
                         if timestep >= warmup_steps:
                             buffer.append({
                                 "env": i,
-                                "v_x_cmd": target_v_x,
-                                "omega_z_cmd": target_omega_z,
+                                "v_x_cmd": v_x,
+                                "omega_z_cmd": omega_z,
                                 "error_x": error_x,
                                 "error_omega_z": error_omega_z,
                             })
@@ -258,6 +265,11 @@ def main():
                     sleep_time = dt - (time.time() - start_time)
                     if args_cli.real_time and sleep_time > 0:
                         time.sleep(sleep_time)
+
+                    if args_cli.keyboard:
+                        rsl_rl_utils.camera_follow(env)
+                        current_cmd = controller.advance()
+                        print(f"[DEBUG] Teclado: v_x={current_cmd[0]:.2f}, omega_z={current_cmd[2]:.2f}")
 
             results_per_env = collections.defaultdict(lambda: {
                 "sum_error_x": 0.0,
@@ -280,6 +292,11 @@ def main():
             count              = data["count"]
             avg_error_x        = data["sum_error_x"]        / count
             avg_error_omega_z  = data["sum_error_omega_z"]  / count
+            mse_x              = data["sum_error_x"] / count
+            mse_omega_z        = data["sum_error_omega_z"] / count
+
+            rmse_x             = mse_x ** 0.5
+            rmse_omega_z       = mse_omega_z ** 0.5
 
             v_x_cmd, _, omega_z_cmd = commands[env_id]   
 
@@ -294,12 +311,18 @@ def main():
                 "omega_z_cmd": omega_z_cmd,
                 "avg_error_x": avg_error_x,
                 "avg_error_omega_z": avg_error_omega_z,
+                "rmse_x": rmse_x,
+                "rmse_omega_z": rmse_omega_z,
                 "count": count
             })
 
     results.sort(key=lambda x: (x["v_x_cmd"], x["omega_z_cmd"]))
 
     os.makedirs("./logs/tracking_log", exist_ok=True)
+
+    if args_cli.log_name is not None:
+        args_cli.tested_terrain = args_cli.log_name
+        
     output_path = os.path.join(f"./logs/tracking_log/average_error_log_{args_cli.trained_terrain}_in_{args_cli.tested_terrain}.json")
     with open(output_path, "w") as f:
         json.dump(results, f, indent=4)
