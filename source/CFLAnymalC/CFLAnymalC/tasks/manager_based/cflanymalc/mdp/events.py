@@ -2,10 +2,20 @@ from isaaclab.utils import configclass
 import isaaclab_tasks.manager_based.locomotion.velocity.mdp as mdp
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import EventTermCfg as EventTerm
+from terrain_stats import terrain_stats   
 
 @configclass
 class EventCfg:
     """Configuration for environmental and robot-related events in the simulation."""
+
+    # Events triggered every simulation step
+
+    # Event term that tracks per-terrain performance (reward, tracking error, episode length)
+    terrain_perf = EventTerm(
+        func = terrain_stats,
+        mode = "step", # called every physics step
+        params = dict(window=500, print_every=10_000)
+    )
 
     # Events triggered once at environment startup (before any resets)
 

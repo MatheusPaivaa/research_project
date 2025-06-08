@@ -79,6 +79,7 @@ class AnymalCPlayFlatEnvCfg(AnymalCFlatEnvCfg):
 
         self.events.base_external_force_torque = None
         self.events.push_robot = None
+        self.events.terrain_perf = None
         self.events.physics_material = EventTerm(
             func=mdp.randomize_rigid_body_material, mode="startup",
             params=dict(
