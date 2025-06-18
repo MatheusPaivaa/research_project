@@ -1,110 +1,125 @@
-import os, torch, collections, omni.log as log
+"""
+Terrain tracking and logging module for environment performance analysis.
+
+Purpose:
+    This experimental function collects terrain-specific statistics during training,
+    such as velocity tracking errors and success rates, and logs them to TensorBoard.
+
+Status:
+    UNDER DEVELOPMENT – subject to change and testing.
+
+Main features:
+    - Computes MAE for linear and angular velocity commands per terrain type.
+    - Tracks success rates (timeouts vs terminations) per terrain.
+    - Logs stats to TensorBoard for visualization over time.
+
+Note:
+    Requires a ManagerBasedRLEnv with terrain and policy observations enabled.
+"""
+
+import os, collections, omni.log as log
+import torch, numpy as np
 from torch.utils.tensorboard import SummaryWriter
-from isaaclab.managers import EventTermCfg
+from pathlib import Path
 from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.terrains.terrain_generator import TerrainGenerator
+import inspect
+from types import ModuleType, FunctionType, MethodType
 
-def _discover_terrain_ids(env: ManagerBasedRLEnv):
+def active_terrain_names(env):
     """
-    
+    Returns the name of the active terrain for each environment instance.
+
+    Args:
+        env (ManagerBasedRLEnv): The simulation environment.
+
     Returns:
-        terrain_name_of_env : list[str] length == env.num_envs
-
+        List[str]: List of terrain names mapped from levels and types.
     """
-    tgen = env.scene.terrain.terrain_generator
+    if not hasattr(env, "_terrain_name_lut"):
+        tg = TerrainGenerator(
+            cfg=env.scene.terrain.cfg.terrain_generator,
+            device="cpu"
+        )
+        env._terrain_name_lut = tg.sub_name 
 
-    if not hasattr(tgen, "sub_terrains") or not tgen.sub_terrains:
-        return ["default"] * env.num_envs
+    levels = env.scene.terrain.terrain_levels.cpu().numpy()
+    types  = env.scene.terrain.terrain_types.cpu().numpy()
+    lut    = env._terrain_name_lut
+    return [lut[l, t] for l, t in zip(levels, types)]
 
-    names = list(tgen.sub_terrains.keys())
-    num_rows, num_cols = tgen.num_rows, tgen.num_cols
-
-    # Row/col is encoded in env.scene.terrain.env_origins
-    env_origins = env.scene.terrain.env_origins   # (num_envs, 3)
-    x_coords = env_origins[:, 0] # use X & Y to recover row/col
-    y_coords = env_origins[:, 1]
-
-    patch_w = (tgen.size[0] / num_rows)
-    patch_h = (tgen.size[1] / num_cols)
-
-    rows = torch.floor((x_coords - x_coords.min()) / patch_w).to(torch.long)
-    cols = torch.floor((y_coords - y_coords.min()) / patch_h).to(torch.long)
-    idx  = (rows * num_cols + cols) % len(names)  
-
-    return [names[i] for i in idx]
-
-def terrain_stats(
-    env: ManagerBasedRLEnv,
-    env_ids: list[int],
-    window: int        = 500,
-    print_every: int   = 10_000,
-    tb_tag_root: str   = "terrain",
-):
+def terrain_stats(env, env_ids, window=500, tb_root="terrain"):
     """
+    Collects and logs terrain-wise tracking errors and success rates.
 
-    Called every sim-step by the EventManager (mode='step').
-    It accumulates stats in env.TERRAIN_STAT_CACHE and writes them out.
-
+    Args:
+        env (ManagerBasedRLEnv): The simulation environment.
+        env_ids (List[int]): List of environment indices to evaluate.
+        window (int): Smoothing window size for moving averages.
+        tb_root (str): TensorBoard log root group name.
     """
-    if not hasattr(env, "TERRAIN_STAT_CACHE"):
-        env.TERRAIN_STAT_CACHE = {
-            "terrain_name": _discover_terrain_ids(env),
-            "step": 0,
-            "writer": SummaryWriter(os.path.join(os.getenv("OUTPUT_DIR", "./tb"), "terrain")),
-            "buf": collections.defaultdict(
-                lambda: collections.deque(maxlen=window)
-            ),
-            "err_lin": collections.defaultdict(lambda: collections.deque(maxlen=window)),
-            "err_ang": collections.defaultdict(lambda: collections.deque(maxlen=window)),
-            "ep_len":  collections.defaultdict(lambda: collections.deque(maxlen=window)),
+    run_dir = Path(getattr(env, "run_dir", ".")) 
+    log_dir = run_dir / "logs" / "tracking"
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    # Initialize logging cache if not already present
+    if not hasattr(env, "TERRAIN_ERR_CACHE"):
+        terr_names = active_terrain_names(env)
+        uniq = sorted(set(terr_names))
+        env.TERRAIN_ERR_CACHE = {
+            "step":   0,
+            "writer": SummaryWriter(log_dir=str(log_dir)),
+            "lin":  {t: collections.deque(maxlen=window) for t in uniq},
+            "ang":  {t: collections.deque(maxlen=window) for t in uniq},
+            "succ": collections.Counter(),
+            "trials": collections.Counter(),
         }
 
-    C = env.TERRAIN_STAT_CACHE
-    step = C["step"]
-    names = C["terrain_name"]
+    C = env.TERRAIN_ERR_CACHE
+    step, writer = C["step"], C["writer"]
 
-    rew_buf  = env.reward_manager.rew_buf
-    done_buf = env.termination_manager.terminated
+    if not isinstance(env.obs_buf, dict) or "policy" not in env.obs_buf:
+        return {}
 
-    obs      = env.obs_buf["policy"]
-    v_err    = torch.abs(obs[env_ids, 9]  - obs[env_ids, 0])  # cmd_x  – vel_x
-    w_err    = torch.abs(obs[env_ids, 11] - obs[env_ids, 5])  # cmd_z  – vel_z
+    # Extract observation data
+    obs = env.obs_buf["policy"]
+    v_act, w_act = obs[env_ids, 0], obs[env_ids, 5]
+    v_cmd, w_cmd = obs[env_ids, 9], obs[env_ids, 11]
+    v_err, w_err = torch.abs(v_cmd - v_act), torch.abs(w_cmd - w_act)
 
-    for i, env_id in enumerate(env_ids):
-        tname = names[env_id]
-        C["buf"][tname].append(rew_buf[env_id].item())
-        C["err_lin"][tname].append(v_err[i].item())
-        C["err_ang"][tname].append(w_err[i].item())
-        if done_buf[env_id]:
-            C["ep_len"][tname].append(env.episode_length_buf[env_id])
+    robot = env.scene["robot"]
+    torques = robot.data.applied_torque[env_ids]
+    qd = robot.data.joint_vel[env_ids]
+    # power = torch.sum(torch.abs(torques * qd), dim=1)
 
-    C["step"] += len(env_ids)
+    # mass, g = robot.data.mass, 9.81
+    lin_vel = obs[env_ids, 0]
+    # cot = power / ((mass * g) * torch.clamp(torch.abs(lin_vel), min=1e-3))
 
-    if C["step"] % print_every < len(env_ids):
-        hdr = "│ {:>10} │ {:>7} │ {:>7} │ {:>7} │ {:>7} │".format(
-            "terrain", "R̄", "v_err", "w_err", "ep_len"
-        )
-        log.info("-" * len(hdr))
-        log.info(hdr)
-        for tn in C["buf"]:
-            mean_r  = torch.tensor(C["buf"][tn]).mean().item()
-            mean_v  = torch.tensor(C["err_lin"][tn]).mean().item()
-            mean_w  = torch.tensor(C["err_ang"][tn]).mean().item()
-            mean_ep = (torch.tensor(C["ep_len"][tn]).float().mean().item()
-                       if C["ep_len"][tn] else 0.0)
-            log.info("│ {:>10} │ {:7.3f} │ {:7.3f} │ {:7.3f} │ {:7.1f} │"
-                     .format(tn, mean_r, mean_v, mean_w, mean_ep))
-        log.info("-" * len(hdr))
+    terr_names = active_terrain_names(env)
+    for li, eid in enumerate(env_ids):
+        terr = terr_names[eid]
 
-    w = C["writer"]
-    for tn in C["buf"]:
-        w.add_scalar(f"{tb_tag_root}/{tn}/reward_mean",
-                     torch.tensor(C["buf"][tn]).mean().item(), global_step=step)
-        w.add_scalar(f"{tb_tag_root}/{tn}/lin_err",
-                     torch.tensor(C["err_lin"][tn]).mean().item(), global_step=step)
-        w.add_scalar(f"{tb_tag_root}/{tn}/ang_err",
-                     torch.tensor(C["err_ang"][tn]).mean().item(), global_step=step)
+        C["lin"][terr].append(v_err[li].item())
+        C["ang"][terr].append(w_err[li].item())
+        # C["cot"][terr].append(cot[li].item())
 
-    env.extras.update({
-        f"{tb_tag_root}/{tn}/reward": torch.tensor(C["buf"][tn]).mean()
-        for tn in C["buf"]
-    })
+        if env.termination_manager.terminated[eid]:
+            C["trials"][terr] += 1
+            if env.termination_manager.time_outs[eid]:
+                C["succ"][terr] += 1
+
+    # Log stats to TensorBoard
+    for terr in C["lin"]:
+        if C["lin"][terr]:
+            writer.add_scalar(f"{tb_root}/{terr}/lin_err_mae",
+                              np.mean(C["lin"][terr]), step)
+            writer.add_scalar(f"{tb_root}/{terr}/ang_err_mae",
+                              np.mean(C["ang"][terr]), step)
+            # writer.add_scalar(f"{tb_root}/{terr}/cot",
+            #                   np.mean(C["cot"][terr]), step)
+            succ = C["succ"][terr] / max(C["trials"][terr], 1)
+            writer.add_scalar(f"{tb_root}/{terr}/success_rate",
+                              succ, step)
+
+    C["step"] += 1

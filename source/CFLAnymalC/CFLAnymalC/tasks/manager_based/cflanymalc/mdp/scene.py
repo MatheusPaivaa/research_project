@@ -10,12 +10,13 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab_assets.robots.anymal import ANYMAL_D_CFG
 
 from CFLAnymalC.tasks.manager_based.cflanymalc.mdp.terrain import get_terrain_cfg
+from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG
 
 @configclass
 class MySceneCfg(InteractiveSceneCfg):
     """Configuration for the terrain scene with a legged robot."""
 
-    # ground terrain
+    # Ground terrain
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
         terrain_type="generator",
@@ -31,12 +32,12 @@ class MySceneCfg(InteractiveSceneCfg):
         debug_vis=False,
     )
 
-    # robots
+    # Robots
     robot: ArticulationCfg = ANYMAL_D_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
     contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True)
     
-    # lights
+    # Lights
     sky_light = AssetBaseCfg(
         prim_path="/World/skyLight",
         spawn=sim_utils.DomeLightCfg(

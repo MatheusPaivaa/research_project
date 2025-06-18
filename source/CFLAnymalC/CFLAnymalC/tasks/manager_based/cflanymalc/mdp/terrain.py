@@ -57,15 +57,17 @@ def get_terrain_cfg(
     all_terrains = {**base_terrains, **extra_terrains}
 
     if selected_terrain == "all":
-        sub_terrains = {
-            name: terrain.__class__(**{**vars(terrain), "proportion": 0.2})
-            for name, terrain in base_terrains.items()  
-        }
+        sub_terrains = {}
+        for name, terrain in base_terrains.items():
+            terrain_cfg = terrain.__class__(**{**vars(terrain), "proportion": 0.2})
+            terrain_cfg.name = name
+            sub_terrains[name] = terrain_cfg
     else:
         if selected_terrain not in all_terrains:
             raise ValueError(f"Terrain '{selected_terrain}' not found. Available options: {list(all_terrains.keys())}")
         terrain_cfg = all_terrains[selected_terrain]
         terrain_cfg.proportion = 1.0
+        terrain_cfg.name = selected_terrain
         sub_terrains = {selected_terrain: terrain_cfg}
 
     return terrain_gen.TerrainGeneratorCfg(
