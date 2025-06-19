@@ -3,6 +3,7 @@ import torch
 from isaaclab.utils import configclass
 import isaaclab_tasks.manager_based.locomotion.velocity.mdp as mdp
 from isaaclab.managers.command_manager import CommandTerm, CommandTermCfg
+from CFLAnymalC.tasks.manager_based.cflanymalc.mdp.curriculum import grid_curriculum
 
 @configclass
 class CommandsCfg:
@@ -25,6 +26,28 @@ class CommandsCfg:
 class ActionsCfg:
     """Action specifications for the MDP."""
     joint_pos = mdp.JointPositionActionCfg(asset_name="robot", joint_names=[".*"], scale=0.5, use_default_offset=True)
+
+class PrioritizedVelocityCommand(CommandTerm):
+    def __init__(self, cfg: "PrioritizedVelocityCommandCfg", env):
+        super().__init__(cfg, env)
+        self.curr = grid_curriculum 
+
+    def __call__(self, env, env_ids):
+        idx = self.curr.sample_cmd_indices(len(env_ids))
+        cmds = self.curr.cmd_map[idx]
+        return cmds
+
+    def reset(self, env_ids): return {}
+    def _resample_command(self, env_ids): pass
+    def _update_command(self): pass
+    def _update_metrics(self): pass
+
+@configclass
+class PrioritizedVelocityCommandCfg(CommandTermCfg):
+    class_type = PrioritizedVelocityCommand
+    asset_name: str = "robot"
+    resampling_time_range: tuple[float, float] = (10.0, 10.0)
+
 
 class FixedVelocityCommand(CommandTerm):
     def __init__(self, cfg: "FixedVelocityCommandCfg", env):

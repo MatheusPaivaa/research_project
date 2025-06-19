@@ -81,33 +81,34 @@ testing_curriculum = [
 
 testing_curriculum = [
     *[
-        "./lib/IsaacLab/isaaclab.sh -p ./scripts/rsl_rl/play.py --task CFL-AnymalC_Play_Flat_Task --num_envs 150 --checkpoint ./logs/rsl_rl_delay/flat_delay_02_01_005_step_02/model_3999.pt --trained_terrain=flat --tested_terrain=flat --log_name=flat_delay_02_01_005_step_02 --headless"
+        "./lib/IsaacLab/isaaclab.sh -p ./scripts/rsl_rl/play.py --task CFL-AnymalC_Play_Flat_Task --num_envs 150 --checkpoint ./logs/rsl_rl_035/anymal_c_flat/flat/model_3999.pt --trained_terrain=flat --tested_terrain=flat --log_name=increment_035 --headless"
     ], 
     *[
-        "./lib/IsaacLab/isaaclab.sh -p ./scripts/rsl_rl/play.py --task CFL-AnymalC_Play_Flat_Task --num_envs 150 --checkpoint ./logs/rsl_rl_delay/flat_delay_02_01_005_step_05/model_3999.pt --trained_terrain=flat --tested_terrain=flat --log_name=flat_delay_02_01_005_step_05 --headless"
+        "./lib/IsaacLab/isaaclab.sh -p ./scripts/rsl_rl/play.py --task CFL-AnymalC_Play_Flat_Task --num_envs 150 --checkpoint ./logs/rsl_rl_sem_redundancia/anymal_c_flat/flat/model_3999.pt --trained_terrain=flat --tested_terrain=flat --log_name=sem_redundancia_05 --headless"
     ], 
     *[
-        "./lib/IsaacLab/isaaclab.sh -p ./scripts/rsl_rl/play.py --task CFL-AnymalC_Play_Flat_Task --num_envs 150 --checkpoint ./logs/rsl_rl_delay/flat_delay_025_0125_005_step_02/model_3999.pt --trained_terrain=flat --tested_terrain=flat --log_name=flat_delay_025_0125_005_step_02 --headless"
+        "./lib/IsaacLab/isaaclab.sh -p ./scripts/rsl_rl/play.py --task CFL-AnymalC_Play_Flat_Task --num_envs 150 --checkpoint ./logs/rsl_rl_sem_regresso/anymal_c_flat/flat/model_3999.pt --trained_terrain=flat --tested_terrain=flat --log_name=sem_regresso_05 --headless"
     ], 
     *[
-        "./lib/IsaacLab/isaaclab.sh -p ./scripts/rsl_rl/play.py --task CFL-AnymalC_Play_Flat_Task --num_envs 150 --checkpoint ./logs/rsl_rl_delay/flat_delay_05_025_005_step_02/model_3999.pt --trained_terrain=flat --tested_terrain=flat --log_name=flat_delay_05_025_005_step_02_nolog --headless"
+        "./lib/IsaacLab/isaaclab.sh -p ./scripts/rsl_rl/play.py --task CFL-AnymalC_Play_Flat_Task --num_envs 150 --checkpoint ./logs/rsl_rl_sem_regresso_unlocked/anymal_c_flat/flat/model_3999.pt --trained_terrain=flat --tested_terrain=flat --log_name=sem_regresso_unlocked_05 --headless"
     ]
 ]
+
 
 testing_curriculum = [
     *[
-        "./lib/IsaacLab/isaaclab.sh -p ./scripts/rsl_rl/play.py --task CFL-AnymalC_Play_Rough_Task --num_envs 150 --checkpoint ./logs/rsl_rl/flat/model_3999.pt --trained_terrain=flat --tested_terrain=generalist --log_name=generalist_delay --headless"
-    ]
-]
-
-all_testing_commands = [
+        "./lib/IsaacLab/isaaclab.sh -p ./scripts/rsl_rl/play.py --task CFL-AnymalC_Play_Flat_Task --num_envs 150 --checkpoint ./logs/rsl_rl/anymal_c_flat/flat/model_3999.pt --trained_terrain=flat --tested_terrain=flat --headless --log_name=janela_media"
+    ], 
     *[
-        "./lib/IsaacLab/isaaclab.sh -p ./scripts/rsl_rl/play.py --task CFL-AnymalC_Play_Rough_Task --num_envs 150 --checkpoint ./logs/rsl_rl/anymal_c_rough/generalist_bom/model_3999.pt --trained_terrain=generalist_bom --tested_terrain=" + terrain + " --headless"
-        for terrain in testing_terrains
+        "./lib/IsaacLab/isaaclab.sh -p ./scripts/rsl_rl/play.py --task CFL-AnymalC_Play_Flat_Task --num_envs 150 --checkpoint ./logs/rsl_rl_sem_regresso/anymal_c_flat/flat/model_3999.pt --trained_terrain=flat --tested_terrain=flat --headless --log_name=sem_regresso"
+    ],
+    *[
+        "./lib/IsaacLab/isaaclab.sh -p ./scripts/rsl_rl/play.py --task CFL-AnymalC_Play_Flat_Task --num_envs 150 --checkpoint ./logs/rsl_rl_janela_antes/anymal_c_flat/flat/model_3999.pt --trained_terrain=flat --tested_terrain=flat --headless --log_name=janela_delay"
     ]
 ]
 
-for cmd in (all_testing_commands):
+
+for cmd in (testing_curriculum):
     print(f"Running: {cmd}")
     process = subprocess.run(cmd, shell=True)
     

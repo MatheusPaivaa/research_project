@@ -9,9 +9,11 @@ import pickle
 import os
 import random
 from collections import Counter
+from collections import defaultdict, deque
 
 from isaaclab.envs import ManagerBasedRLEnv
 
+# Variables for managing curriculum logging and persistence
 curriculum_step_counter = 0
 SAVE_INTERVAL = 3000 
 SAVE_DIR = "./logs/curriculum_logs" 
@@ -37,12 +39,13 @@ class GridCurriculumManager:
         self,
         device: torch.device,
         num_envs: int,
-        steps: float = 0.2,
+        steps: float = 0.5,
         max_range: float = 3.0,
         start_range: float = 0.5,
         eps_v: float = 0.15,
         eps_w: float = 0.25,
         delay: bool = False,
+        window_size: int = 2,
         log_error_decay: bool = False,
     ) -> None:
         
@@ -58,7 +61,8 @@ class GridCurriculumManager:
         self.EPS_W0 = eps_w
 
         self.increment_confidence = 0.5
-        self.decrement_confidence = 0.1
+        self.window_size = window_size
+        self.win_buffers = defaultdict(lambda: deque(maxlen=self.window_size))
 
         self.delay = delay
         self.log_error_decay = log_error_decay
@@ -95,7 +99,17 @@ class GridCurriculumManager:
         cmd_map = torch.stack([grid_lin.reshape(-1), grid_ang.reshape(-1)], dim=1)
 
         return cmd_map, lin_vals, ang_vals
+    
+    def _record_errors_window(self, key, v_err, w_err):
+        """
+        Stores recent tracking errors (v_err, w_err) in a sliding window buffer for a specific command bin.
 
+        Args:
+            key: Tuple representing the command bin.
+            v_err: Linear velocity error.
+            w_err: Angular velocity error.
+        """
+        self.win_buffers[key].append((v_err, w_err))
 
     def map_commands_to_bins(self, cmds: torch.Tensor) -> torch.Tensor:
         """
@@ -113,29 +127,19 @@ class GridCurriculumManager:
         nearest_idx = torch.argmin(distances, dim=1)
         return self.cmd_map[nearest_idx]
     
-    def update_bin_confidence(self, newly_unlocked: Set[Tuple[float, float]], cell_perf: dict) -> None:
+    def update_bin_confidence(self, newly_unlocked: Set[Tuple[float, float]]) -> None:
         """
         Updates confidence levels for each bin based on recent performance.
 
         Args:
             newly_unlocked: Bins that achieved good performance in the current step.
-            cell_perf: Dictionary with performance data for all evaluated bins in the current step.
         """
-
-        for bin in newly_unlocked:
-            norm_bin = normalize_bin_key(bin, self.steps)
-            self.bin_confidence[norm_bin] += self.increment_confidence
 
         expanded_neighbors = self._expand_neighbors(newly_unlocked)
         for bin in expanded_neighbors:
             mapped_bin = self.map_commands_to_bins(torch.tensor([bin], device=self.device))[0]
             mapped_key = tuple(mapped_bin.tolist())
-            self.bin_confidence[mapped_key] += self.increment_confidence / 2
-
-        for bin in cell_perf.keys():
-            mapped_bin = self.map_commands_to_bins(torch.tensor([bin], device=self.device))[0]
-            mapped_key = tuple(mapped_bin.tolist())
-            self.bin_confidence[mapped_key] = max(0.0, self.bin_confidence[mapped_key] - self.decrement_confidence)
+            self.bin_confidence[mapped_key] += self.increment_confidence
 
         for bin, score in self.bin_confidence.items():
             if score >= 1.0:
@@ -163,19 +167,42 @@ class GridCurriculumManager:
             for k, v_w_list in cell_perf.items()
         }
 
-        newly_unlocked = {
-            k for k, (v_avg, w_avg) in cell_avg.items()
-            if v_avg < self.EPS_V and w_avg < self.EPS_W
-        }
+        if self.delay:
+            newly_unlocked = {
+                k for k, (v_avg, w_avg) in cell_avg.items()
+                if v_avg < self.EPS_V and w_avg < self.EPS_W
+            }
+        else: 
+            newly_unlocked = set()
+            for cmd, ev, ew in zip(matched_cmds, v_error, w_error):
+                key = normalize_bin_key(tuple(cmd.tolist()), self.steps)
+
+                self._record_errors_window(key, ev.item(), ew.item())
+                buf = self.win_buffers[key]
+
+                if len(buf) == self.window_size:
+                    v_avg = sum(e[0] for e in buf) / self.window_size
+                    w_avg = sum(e[1] for e in buf) / self.window_size
+                    if v_avg < self.EPS_V and w_avg < self.EPS_W:
+                        newly_unlocked.add(key)
 
         # Activate delay
         if self.delay:
-            self.update_bin_confidence(newly_unlocked, cell_perf)
+            self.update_bin_confidence(newly_unlocked)
         else:
             expanded = self._expand_neighbors(newly_unlocked)
             self.unlocked_bins.update(expanded)
 
     def _expand_neighbors(self, cells: Set[Tuple[float, float]]) -> Set[Tuple[float, float]]:
+        """
+        Expands the given set of bins to include their 8-connected neighbors in the grid.
+
+        Args:
+            cells: Set of unlocked bins (tuples) to expand.
+
+        Returns:
+            Set[Tuple[float, float]]: Expanded set including original bins and their valid neighbors.
+        """
         expanded = set()
         for x, z in cells:
             for dx_off in [-self.dx, 0, self.dx]:
@@ -203,9 +230,24 @@ class GridCurriculumManager:
         return lin_bounds, ang_bounds
 
     def save_unlocked_bins(self, path: str):
+        """
+        Saves the current set of unlocked bins to a file.
+
+        Args:
+            path: File path to save the unlocked bin data.
+        """
         with open(path, 'wb') as f:
             pickle.dump(self.unlocked_bins, f)
 
+    def save_bin_confidences(self, path: str):
+        """
+        Saves the current bin confidence scores to a file.
+
+        Args:
+            path: File path to save the bin confidence data.
+        """
+        with open(path, 'wb') as f:
+            pickle.dump(self.bin_confidence, f)
 
 # Curriculum hook for updating command ranges based on performance
 def command_levels(env: ManagerBasedRLEnv, env_ids: List[int]) -> torch.Tensor:
@@ -272,9 +314,12 @@ def command_levels(env: ManagerBasedRLEnv, env_ids: List[int]) -> torch.Tensor:
     curriculum_step_counter += len(env_ids)
 
     if curriculum_step_counter % SAVE_INTERVAL < len(env_ids):
-        os.makedirs(SAVE_DIR, exist_ok=True)
-        step_path = os.path.join(SAVE_DIR, f"bins_step_{curriculum_step_counter}.pkl")
+        step_path = os.path.join(SAVE_DIR, f"unlocked_bin_step_{curriculum_step_counter}.pkl")
         grid_curriculum.save_unlocked_bins(step_path)
+
+        if grid_curriculum.delay:
+            step_path = os.path.join(SAVE_DIR, f"bins_confidence_step_{curriculum_step_counter}.pkl")
+            grid_curriculum.save_bin_confidences(step_path)
 
     result = {
         "lin_vel_min": torch.tensor(lin_range[0], device=env.device).item(),
@@ -289,7 +334,6 @@ def command_levels(env: ManagerBasedRLEnv, env_ids: List[int]) -> torch.Tensor:
         result["erro_ang_threshold"] = torch.tensor(grid_curriculum.EPS_W, device=env.device).item()
 
     return result
-
 
 @configclass
 class CurriculumCfg:

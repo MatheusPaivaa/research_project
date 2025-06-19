@@ -218,9 +218,8 @@ def main():
         for i, cmd in enumerate(commands):
             print(f"  Env {i}: v_x={cmd[0]:.2f}, omega_z={cmd[2]:.2f}")
 
-        buffer = []
-
         for trial in range(trials):
+            buffer = []
             print(f"[INFO]  Trial {trial + 1}/{trials}")
             obs, _ = env.get_observations()
             timestep = 0
